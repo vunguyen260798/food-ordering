@@ -9,7 +9,16 @@ const Sidebar = () => {
         <ul className="sidebar-nav">
           <li>
             <NavLink 
-              to="/products" 
+              to="/admin" 
+              className={({ isActive }) => isActive ? 'active' : ''}
+              end
+            >
+              📊 Dashboard
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
+              to="/admin/products" 
               className={({ isActive }) => isActive ? 'active' : ''}
             >
               🍕 Product Management
@@ -17,10 +26,18 @@ const Sidebar = () => {
           </li>
           <li>
             <NavLink 
-              to="/orders" 
+              to="/admin/orders" 
               className={({ isActive }) => isActive ? 'active' : ''}
             >
               📦 Order Management
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
+              to="/" 
+              style={{ borderTop: '1px solid #34495e', marginTop: '20px', paddingTop: '20px' }}
+            >
+              🌐 View Customer Site
             </NavLink>
           </li>
         </ul>
