@@ -5,6 +5,7 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const orderController = require('../controllers/orderController');
 const paymentController = require('../controllers/paymentController');
+const partnerController = require('../controllers/partnerController');
 
 // Product routes
 router.get('/products', productController.getProducts);
@@ -26,5 +27,12 @@ router.get('/payments/:id', paymentController.getPaymentTransactionById);
 router.post('/payments', paymentController.createPaymentTransaction);
 router.put('/payments/:id/process', paymentController.processPayment);
 router.put('/payments/:id/refund', paymentController.refundPayment);
+
+// Partner routes
+router.get('/partners', partnerController.getPartners);
+router.get('/partners/:id', partnerController.getPartnerById);
+router.post('/partners', partnerController.createPartner);
+router.put('/partners/:id', partnerController.updatePartner);
+router.delete('/partners/:id', partnerController.deletePartner);
 
 module.exports = router;

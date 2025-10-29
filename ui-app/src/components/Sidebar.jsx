@@ -34,6 +34,14 @@ const Sidebar = () => {
           </li>
           <li>
             <NavLink 
+              to="/admin/partners" 
+              className={({ isActive }) => isActive ? 'active' : ''}
+            >
+              📦 Partner Management
+            </NavLink>
+          </li>
+          <li>
+            <NavLink 
               to="/" 
               style={{ borderTop: '1px solid #34495e', marginTop: '20px', paddingTop: '20px' }}
             >

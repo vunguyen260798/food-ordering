@@ -5,6 +5,7 @@ import AdminLayout from './components/AdminLayout';
 import Dashboard from './pages/Dashboard';
 import ProductManagement from './pages/ProductManagement';
 import OrderManagement from './pages/OrderManagement';
+import PartnerManagement from './pages/PartnerManagement';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="products" element={<ProductManagement />} />
           <Route path="orders" element={<OrderManagement />} />
+          <Route path="partners" element={<PartnerManagement />} />
         </Route>
       </Routes>
     </Router>
