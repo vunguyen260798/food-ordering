@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Food Ordering - Telegram Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--tg-theme-text-color);
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 80px;
+        }
+
+        .product-card {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 12px;
+            padding: 12px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 120px;
+            background: var(--tg-theme-button-color, #0088cc);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+
+        .product-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .product-price {
+            color: var(--tg-theme-hint-color, #999);
+            font-size: 13px;
+        }
+
+        .cart-button {
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 584px;
+            margin: 0 auto;
+        }
+
+        .cart-button:active {
+            opacity: 0.8;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        .user-info {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍕 Food Ordering</h1>
+        
+        <div id="userInfo" class="user-info" style="display: none;">
+            <div>👤 <span id="userName"></span></div>
+            <div style="font-size: 12px; color: var(--tg-theme-hint-color, #999); margin-top: 4px;">
+                User ID: <span id="userId"></span>
+            </div>
+        </div>
+
+        <div id="productList" class="loading">Loading products...</div>
+        
+        <button id="cartButton" class="cart-button" style="display: none;">
+            <span>View Cart</span>
+            <span class="badge"><span id="cartCount">0</span> items</span>
+        </button>
+    </div>
+
+    <script>
+        // Initialize Telegram Web App
+        let tg = window.Telegram.WebApp;
+        
+        // Expand the app to full height
+        tg.expand();
+        
+        // Enable closing confirmation
+        tg.enableClosingConfirmation();
+
+        // Set header color
+        tg.setHeaderColor('secondary_bg_color');
+
+        // Display user info if available
+        if (tg.initDataUnsafe.user) {
+            const user = tg.initDataUnsafe.user;
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('userName').textContent = 
+                user.first_name + (user.last_name ? ' ' + user.last_name : '');
+            document.getElementById('userId').textContent = user.id;
+        }
+
+        // Cart state
+        let cart = [];
+
+        // Sample products (replace with API call)
+        const sampleProducts = [
+            { id: 1, name: '🍕 Pizza', price: 12.99, emoji: '🍕' },
+            { id: 2, name: '🍔 Burger', price: 8.99, emoji: '🍔' },
+            { id: 3, name: '🍣 Sushi', price: 15.99, emoji: '🍣' },
+            { id: 4, name: '🌮 Tacos', price: 9.99, emoji: '🌮' },
+            { id: 5, name: '🍜 Ramen', price: 11.99, emoji: '🍜' },
+            { id: 6, name: '🥗 Salad', price: 7.99, emoji: '🥗' },
+        ];
+
+        // Load products
+        function loadProducts() {
+            // TODO: Replace with actual API call
+            // fetch('YOUR_API_URL/products')
+            //     .then(response => response.json())
+            //     .then(data => displayProducts(data));
+            
+            // For now, use sample data
+            setTimeout(() => {
+                displayProducts(sampleProducts);
+            }, 500);
+        }
+
+        // Display products
+        function displayProducts(products) {
+            const productList = document.getElementById('productList');
+            productList.className = 'product-grid';
+            productList.innerHTML = '';
+
+            products.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div class="product-image">${product.emoji || '🍽️'}</div>
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-price">$${product.price.toFixed(2)}</div>
+                `;
+                card.onclick = () => addToCart(product);
+                productList.appendChild(card);
+            });
+        }
+
+        // Add to cart
+        function addToCart(product) {
+            cart.push(product);
+            updateCart();
+            
+            // Show haptic feedback
+            tg.HapticFeedback.impactOccurred('light');
+            
+            // Show notification
+            tg.showPopup({
+                message: `${product.name} added to cart!`,
+                buttons: [{ type: 'ok' }]
+            });
+        }
+
+        // Update cart
+        function updateCart() {
+            const cartButton = document.getElementById('cartButton');
+            const cartCount = document.getElementById('cartCount');
+            
+            if (cart.length > 0) {
+                cartButton.style.display = 'flex';
+                cartCount.textContent = cart.length;
+            } else {
+                cartButton.style.display = 'none';
+            }
+        }
+
+        // Cart button click
+        document.getElementById('cartButton').onclick = function() {
+            const total = cart.reduce((sum, item) => sum + item.price, 0);
+            const itemList = cart.map(item => `${item.name}: $${item.price}`).join('\n');
+            
+            tg.showPopup({
+                title: 'Your Cart',
+                message: `${itemList}\n\nTotal: $${total.toFixed(2)}`,
+                buttons: [
+                    { id: 'checkout', type: 'default', text: 'Checkout' },
+                    { id: 'clear', type: 'destructive', text: 'Clear Cart' },
+                    { type: 'cancel' }
+                ]
+            }, (buttonId) => {
+                if (buttonId === 'checkout') {
+                    checkout();
+                } else if (buttonId === 'clear') {
+                    cart = [];
+                    updateCart();
+                }
+            });
+        };
+
+        // Checkout function
+        function checkout() {
+            // Send data back to bot
+            tg.sendData(JSON.stringify({
+                cart: cart,
+                total: cart.reduce((sum, item) => sum + item.price, 0),
+                user: tg.initDataUnsafe.user
+            }));
+            
+            // Close the app
+            tg.close();
+        }
+
+        // Main button (alternative to cart button)
+        tg.MainButton.setText('Checkout');
+        tg.MainButton.onClick(() => {
+            if (cart.length > 0) {
+                checkout();
+            }
+        });
+
+        // Update main button visibility
+        function updateMainButton() {
+            if (cart.length > 0) {
+                tg.MainButton.show();
+            } else {
+                tg.MainButton.hide();
+            }
+        }
+
+        // Override updateCart to also update main button
+        const originalUpdateCart = updateCart;
+        updateCart = function() {
+            originalUpdateCart();
+            updateMainButton();
+        };
+
+        // Initialize
+        loadProducts();
+    </script>
+</body>
+</html>
