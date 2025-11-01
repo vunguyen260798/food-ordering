@@ -1,6 +1,42 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
-const QRPayment = ({ finalTotal, onClose, onPaymentSuccess }) => {
+const QRPayment = ({ order, finalTotal, onClose, onPaymentSuccess }) => {
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    if (!order?.cryptoPayment?.expiresAt) return;
+
+    const expiryTime = new Date(order.cryptoPayment.expiresAt).getTime();
+    
+    const updateTimer = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((expiryTime - now) / 1000));
+      
+      setTimeLeft(remaining);
+      setIsExpired(remaining === 0);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [order]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    // Có thể thêm toast notification ở đây
+    alert('Wallet address copied to clipboard!');
+  };
+
+  if (!order) return null;
+
   return (
     <div className="qr-payment-overlay">
       <div className="qr-payment-modal">
@@ -10,6 +46,18 @@ const QRPayment = ({ finalTotal, onClose, onPaymentSuccess }) => {
         </div>
         
         <div className="qr-payment-content">
+          {/* Timer */}
+          <div className="payment-timer">
+            <div className={`timer ${isExpired ? 'expired' : 'active'}`}>
+              ⏰ Time remaining: {formatTime(timeLeft)}
+            </div>
+            {isExpired && (
+              <div className="expired-message">
+                ❌ Payment session expired. Please create a new order.
+              </div>
+            )}
+          </div>
+
           <div className="qr-code-container">
             <div className="qr-code-placeholder">
               <div className="qr-code">
@@ -33,36 +81,49 @@ const QRPayment = ({ finalTotal, onClose, onPaymentSuccess }) => {
           <div className="payment-details">
             <div className="payment-amount">
               <div className="amount-label">Amount to Pay</div>
-              <div className="amount-value">${finalTotal.toFixed(2)}</div>
+              <div className="amount-value">{finalTotal} USDT</div>
             </div>
             
             <div className="crypto-address">
-              <div className="address-label">Wallet Address</div>
+              <div className="address-label">Merchant Wallet Address (TRC20)</div>
               <div className="address-value">
-                0x742d35Cc6634C0532925a3b8D
-                <button className="copy-button">Copy</button>
+                {order.cryptoPayment.walletAddress}
+                <button 
+                  className="copy-button"
+                  onClick={() => copyToClipboard(order.cryptoPayment.walletAddress)}
+                >
+                  Copy
+                </button>
               </div>
             </div>
 
             <div className="payment-instructions">
-              <h4>Payment Instructions:</h4>
+              <h4>📋 Payment Instructions:</h4>
               <ol>
-                <li>Scan QR code with your crypto wallet</li>
-                <li>Send exact amount: ${finalTotal.toFixed(2)}</li>
-                <li>Wait for transaction confirmation</li>
-                <li>Order will be processed automatically</li>
+                <li>Send <strong>exactly {finalTotal} USDT</strong> to the address above</li>
+                <li>Make sure to use <strong>TRC20 network</strong></li>
+                <li>Wait for transaction confirmation (usually 2-3 minutes)</li>
+                <li>Click "I've Paid" after sending the transaction</li>
+                <li>Order will be confirmed automatically once payment is detected</li>
               </ol>
             </div>
+          </div>
+
+          <div className="order-summary">
+            <h4>Order Summary:</h4>
+            {order.orderItems && order.orderItems.map((item, index) => (
+              <div key={index} className="order-item-summary">
+                {item.productName} × {item.quantity} - ${item.productPrice}
+              </div>
+            ))}
+            <div className="order-total">Total: ${finalTotal}</div>
           </div>
 
           <div className="supported-cryptos">
             <div className="section-title">Supported Cryptocurrencies</div>
             <div className="crypto-list">
-              <div className="crypto-item">BTC</div>
-              <div className="crypto-item">ETH</div>
-              <div className="crypto-item">USDT</div>
-              <div className="crypto-item">BNB</div>
-              <div className="crypto-item">SOL</div>
+              <div className="crypto-item">USDT (TRC20)</div>
+              <div className="crypto-item">TRX</div>
             </div>
           </div>
         </div>
@@ -72,13 +133,14 @@ const QRPayment = ({ finalTotal, onClose, onPaymentSuccess }) => {
             className="back-button"
             onClick={onClose}
           >
-            Back to Payment
+            Cancel Order
           </button>
           <button 
             className="confirm-button"
             onClick={onPaymentSuccess}
+            disabled={isExpired}
           >
-            I've Paid
+            {isExpired ? 'Session Expired' : 'I\'ve Paid'}
           </button>
         </div>
       </div>

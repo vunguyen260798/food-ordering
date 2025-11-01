@@ -23,8 +23,9 @@ const FoodOrderingApp = () => {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('crypto');
+  const [currentOrder, setCurrentOrder] = useState(null);
 
-  // Kiểm tra theme từ localStorage và system preference
+  // Kiểm tra theme
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -34,7 +35,7 @@ const FoodOrderingApp = () => {
     }
   }, []);
 
-  // Áp dụng theme khi darkMode thay đổi
+  // Áp dụng theme
   useEffect(() => {
     if (darkMode) {
       document.documentElement.setAttribute('data-theme', 'dark');
@@ -65,12 +66,11 @@ const FoodOrderingApp = () => {
     }
   };
 
-  // Hàm kiểm tra sản phẩm có trong giỏ hàng không
+  // Cart functions
   const isProductInCart = (productId) => {
     return cart.some(item => item.productId === productId);
   };
 
-  // Hàm lấy số lượng sản phẩm trong giỏ hàng
   const getProductQuantity = (productId) => {
     const item = cart.find(item => item.productId === productId);
     return item ? item.quantity : 0;
@@ -125,11 +125,11 @@ const FoodOrderingApp = () => {
   };
 
   const getDeliveryFee = () => {
-    return 0; // Free delivery
+    return 0;
   };
 
   const getTax = () => {
-    return getTotalPrice() * 0.08; // 8% tax
+    return getTotalPrice() * 0.08;
   };
 
   const getFinalTotal = () => {
@@ -140,11 +140,7 @@ const FoodOrderingApp = () => {
     try {
       setError('');
 
-      if (selectedPaymentMethod === 'crypto') {
-        setShowQRPayment(true);
-        return;
-      }
-
+      // Chuẩn bị order payload
       const orderPayload = {
         items: cart.map(item => ({
           productId: item.productId,
@@ -155,13 +151,23 @@ const FoodOrderingApp = () => {
         paymentMethod: selectedPaymentMethod
       };
 
-      await orderAPI.createOrder(orderPayload);
+      // Gọi API tạo order
+      const response = await orderAPI.createOrder(orderPayload);
       
-      setOrderSuccess(true);
-      setCart([]);
-      setShowOrderForm(false);
-      setShowQRPayment(false);
-      setSpecialInstructions('');
+      if (response.success) {
+        setCurrentOrder(response.data);
+        
+        if (selectedPaymentMethod === 'crypto') {
+          setShowQRPayment(true);
+        } else {
+          setOrderSuccess(true);
+          setCart([]);
+          setShowOrderForm(false);
+          setSpecialInstructions('');
+        }
+      } else {
+        setError(response.message || 'Failed to create order');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to place order');
     }
@@ -169,30 +175,36 @@ const FoodOrderingApp = () => {
 
   const handleQRPaymentSuccess = async () => {
     try {
-      const orderPayload = {
-        items: cart.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity
-        })),
-        specialInstructions,
-        total: getFinalTotal(),
-        paymentMethod: 'crypto'
+      // Polling để kiểm tra trạng thái thanh toán
+      const checkPaymentStatus = async () => {
+        if (!currentOrder) return;
+        
+        const response = await orderAPI.checkOrderStatus(currentOrder._id);
+        
+        if (response.data.status === 'paid') {
+          setOrderSuccess(true);
+          setCart([]);
+          setShowOrderForm(false);
+          setShowQRPayment(false);
+          setSpecialInstructions('');
+          setCurrentOrder(null);
+        } else {
+          // Tiếp tục polling sau 5 giây
+          setTimeout(checkPaymentStatus, 5000);
+        }
       };
 
-      await orderAPI.createOrder(orderPayload);
+      // Bắt đầu polling
+      checkPaymentStatus();
       
-      setOrderSuccess(true);
-      setCart([]);
-      setShowOrderForm(false);
-      setShowQRPayment(false);
-      setSpecialInstructions('');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to place order');
+      setError('Error checking payment status');
     }
   };
 
   const closeOrderSuccess = () => {
     setOrderSuccess(false);
+    setCurrentOrder(null);
   };
 
   if (orderSuccess) {
@@ -252,10 +264,14 @@ const FoodOrderingApp = () => {
         />
       )}
 
-      {showQRPayment && (
+      {showQRPayment && currentOrder && (
         <QRPayment
+          order={currentOrder}
           finalTotal={getFinalTotal()}
-          onClose={() => setShowQRPayment(false)}
+          onClose={() => {
+            setShowQRPayment(false);
+            setCurrentOrder(null);
+          }}
           onPaymentSuccess={handleQRPaymentSuccess}
         />
       )}

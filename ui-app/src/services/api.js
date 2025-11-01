@@ -8,6 +8,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000,
 });
 
 // Product API functions
@@ -64,7 +65,20 @@ export const orderAPI = {
 
   // Create new order
   createOrder: async (orderData) => {
-    const response = await api.post('/orders', orderData);
+    const response = await api.post('/orders', {
+      items: orderData.items,
+      specialInstructions: orderData.specialInstructions,
+      paymentMethod: orderData.paymentMethod,
+      customerName: 'Customer', 
+      customerPhone: '', 
+      deliveryAddress: '' 
+    });
+    return response.data;
+  },
+
+  // Check order payment status
+  checkOrderStatus: async (orderId) => {
+    const response = await api.get(`/orders/${orderId}/payment-status`);
     return response.data;
   },
 

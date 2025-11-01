@@ -5,7 +5,7 @@ const OrderSuccess = ({ onClose }) => {
     <div className="mobile-app">
       <div className="order-success-overlay">
         <div className="order-success-modal">
-          <h2>🎉 Order Placed Successfully!</h2>
+          <h2>Order Placed Successfully!</h2>
           <p>Thank you for your order. We'll contact you shortly to confirm.</p>
           <p>Estimated delivery: 45 minutes</p>
           <button 
