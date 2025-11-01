@@ -12,36 +12,21 @@ const orderItemSchema = new mongoose.Schema({
   },
   productPrice: {
     type: Number,
-    required: true,
-    min: 0
+    required: true
   },
   quantity: {
     type: Number,
     required: true,
-    min: 1,
-    default: 1
+    min: 1
   },
   subtotal: {
     type: Number,
-    required: true,
-    min: 0
+    required: true
   },
-  customizations: [{
-    name: String,
-    value: String
-  }],
-  specialRequest: {
-    type: String,
-    default: ''
-  }
+  customizations: [String],
+  specialRequest: String
 }, {
   timestamps: true
-});
-
-// Calculate subtotal before saving
-orderItemSchema.pre('save', function(next) {
-  this.subtotal = this.productPrice * this.quantity;
-  next();
 });
 
 module.exports = mongoose.model('OrderItem', orderItemSchema);

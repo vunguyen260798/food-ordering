@@ -5,6 +5,9 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/database');
 const router = require('./routes/router');
 
+const cron = require('node-cron');
+const cryptoPaymentService = require('./services/cryptoPaymentService');
+
 // Load environment variables
 dotenv.config();
 
@@ -45,6 +48,17 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
+});
+
+
+// Chạy mỗi 30 giây để kiểm tra payment
+cron.schedule('*/5 * * * * *', () => {
+  cryptoPaymentService.checkCryptoPayments();
+});
+
+// Chạy mỗi phút để đánh dấu order hết hạn
+cron.schedule('* * * * *', () => {
+  cryptoPaymentService.expireOldOrders();
 });
 
 module.exports = app;

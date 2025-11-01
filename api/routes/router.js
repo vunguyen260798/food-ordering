@@ -14,19 +14,17 @@ router.post('/products', productController.createProduct);
 router.put('/products/:id', productController.updateProduct);
 router.delete('/products/:id', productController.deleteProduct);
 
-// Order routes
-router.get('/orders', orderController.getOrders);
+// routes/orders.js
+router.get('/orders/', orderController.getOrders);
 router.get('/orders/:id', orderController.getOrderById);
-router.post('/orders', orderController.createOrder);
+router.get('/orders/:id/payment-status', orderController.checkPaymentStatus);
+router.post('/orders/', orderController.createOrder);
 router.put('/orders/:id/status', orderController.updateOrderStatus);
 router.put('/orders/:id/cancel', orderController.cancelOrder);
 
 // Payment routes
-router.get('/payments', paymentController.getPaymentTransactions);
-router.get('/payments/:id', paymentController.getPaymentTransactionById);
-router.post('/payments', paymentController.createPaymentTransaction);
-router.put('/payments/:id/process', paymentController.processPayment);
-router.put('/payments/:id/refund', paymentController.refundPayment);
+router.get('/transactions', paymentController.getPaymentTransactions);
+router.get('/transactions/:id', paymentController.getPaymentTransactionById);
 
 // Partner routes
 router.get('/partners', partnerController.getPartners);

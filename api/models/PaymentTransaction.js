@@ -1,92 +1,84 @@
 const mongoose = require('mongoose');
 
 const paymentTransactionSchema = new mongoose.Schema({
+  // Transaction ID từ blockchain
   transactionId: {
     type: String,
     required: true,
     unique: true
   },
+  
+  // Tham chiếu đến order
   order: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Order',
     required: true
   },
+  
+  // Số tiền nhận được (USDT)
   amount: {
     type: Number,
     required: true,
     min: 0
   },
-  currency: {
+  
+  // Địa chỉ ví người gửi
+  fromAddress: {
     type: String,
-    default: 'USD',
-    uppercase: true
-  },
-  paymentMethod: {
-    type: String,
-    enum: ['credit-card', 'debit-card', 'paypal', 'cash', 'wallet', 'upi'],
     required: true
   },
-  paymentGateway: {
+  
+  // Địa chỉ ví người nhận (ví merchant)
+  toAddress: {
     type: String,
-    enum: ['stripe', 'paypal', 'square', 'cash', 'razorpay'],
-    default: 'stripe'
+    required: true,
+    default: 'TXXGsnvM3dtr5LZp13QKHnnfmqKsuYTVdk'
   },
+  
+  // Loại token (USDT, TRX, ...)
+  tokenSymbol: {
+    type: String,
+    required: true,
+    default: 'USDT'
+  },
+  
+  // Trạng thái giao dịch
   status: {
     type: String,
-    enum: ['pending', 'processing', 'completed', 'failed', 'refunded', 'cancelled'],
-    default: 'pending'
+    enum: ['pending', 'confirmed', 'failed'],
+    default: 'confirmed'
   },
-  gatewayTransactionId: {
-    type: String,
-    default: ''
+  
+  // Thời gian giao dịch trên blockchain
+  blockTimestamp: {
+    type: Date,
+    required: true
   },
-  gatewayResponse: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
+  
+  // Số block
+  blockNumber: {
+    type: Number
   },
-  refundAmount: {
+  
+  // Giá trị gốc từ blockchain (chưa chia decimals)
+  rawValue: {
+    type: String
+  },
+  
+  // Số decimals của token
+  decimals: {
     type: Number,
-    default: 0,
-    min: 0
-  },
-  refundReason: {
-    type: String,
-    default: ''
-  },
-  refundedAt: {
-    type: Date
-  },
-  failureReason: {
-    type: String,
-    default: ''
-  },
-  customerDetails: {
-    name: String,
-    email: String,
-    phone: String
-  },
-  billingAddress: {
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
-    country: String
-  },
-  completedAt: {
-    type: Date
+    default: 6
   }
+
 }, {
-  timestamps: true
+  timestamps: true // Tự động tạo createdAt, updatedAt
 });
 
-// Generate unique transaction ID before saving
-paymentTransactionSchema.pre('save', async function(next) {
-  if (!this.transactionId) {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    this.transactionId = `TXN-${timestamp}-${random}`;
-  }
-  next();
-});
+// Index để tìm kiếm nhanh
+paymentTransactionSchema.index({ order: 1 });
+paymentTransactionSchema.index({ transactionId: 1 });
+paymentTransactionSchema.index({ fromAddress: 1 });
+paymentTransactionSchema.index({ blockTimestamp: -1 });
 
 module.exports = mongoose.model('PaymentTransaction', paymentTransactionSchema);
