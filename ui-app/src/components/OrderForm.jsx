@@ -22,10 +22,6 @@ const OrderForm = ({
         <div className="order-form-content">
           {/* Order Items */}
           <div className="order-items-section">
-            <div className="section-header">
-              <span className="section-title">Ealt</span>
-              <button className="edit-button">Edit</button>
-            </div>
             {cart.map(item => (
               <div key={item.id} className="order-item">
                 <div className="order-item-main">
@@ -74,17 +70,6 @@ const OrderForm = ({
             <div className="section-title">Payment Method</div>
             <div className="payment-methods">
               <div 
-                className={`payment-method ${selectedPaymentMethod === 'stripe' ? 'selected' : ''}`}
-                onClick={() => onPaymentMethodChange('stripe')}
-              >
-                <div className="payment-method-info">
-                  <div className="payment-method-name">Stripe</div>
-                  <div className="payment-method-description">Payment provider</div>
-                </div>
-                <div className="payment-method-icon">💳</div>
-              </div>
-              
-              <div 
                 className={`payment-method ${selectedPaymentMethod === 'crypto' ? 'selected' : ''}`}
                 onClick={() => onPaymentMethodChange('crypto')}
               >
@@ -102,8 +87,6 @@ const OrderForm = ({
             <div className="section-title">Phương thức thanh toán đa dạng</div>
             <div className="payment-options">
               <div className="payment-option">Visa</div>
-              <div className="payment-option">Crypto QR</div>
-              <div className="payment-option">Apple Pay</div>
             </div>
           </div>
         </div>

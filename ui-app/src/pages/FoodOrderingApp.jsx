@@ -22,7 +22,7 @@ const FoodOrderingApp = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('stripe');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('crypto');
 
   // Kiểm tra theme từ localStorage và system preference
   useEffect(() => {

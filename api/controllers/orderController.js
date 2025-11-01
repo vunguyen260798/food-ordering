@@ -97,12 +97,13 @@ const createOrder = async (req, res) => {
         });
       }
 
-      if (!product.inStock) {
-        return res.status(400).json({
-          success: false,
-          message: `Product out of stock: ${product.name}`
-        });
-      }
+      // COMMENT HOẶC XÓA PHẦN KIỂM TRA inStock
+      // if (!product.inStock) {
+      //   return res.status(400).json({
+      //     success: false,
+      //     message: `Product out of stock: ${product.name}`
+      //   });
+      // }
 
       const orderItem = await OrderItem.create({
         product: product._id,
@@ -114,7 +115,7 @@ const createOrder = async (req, res) => {
       });
 
       orderItemIds.push(orderItem._id);
-      subtotal += orderItem.subtotal;
+      subtotal += product.price * item.quantity;
     }
 
     // Calculate totals
@@ -129,15 +130,15 @@ const createOrder = async (req, res) => {
     // Create order
     const order = await Order.create({
       orderItems: orderItemIds,
-      customerName,
-      customerEmail,
-      customerPhone,
-      deliveryAddress,
+      customerName: customerName || 'Walk-in Customer',
+      customerEmail: customerEmail || '',
+      customerPhone: customerPhone || '',
+      deliveryAddress: deliveryAddress || '',
       subtotal,
       tax,
       deliveryFee,
       totalAmount,
-      specialInstructions,
+      specialInstructions: specialInstructions || '',
       estimatedDeliveryTime
     });
 
@@ -150,6 +151,7 @@ const createOrder = async (req, res) => {
       data: order
     });
   } catch (error) {
+    console.error('Create order error:', error);
     res.status(400).json({
       success: false,
       message: 'Error creating order',

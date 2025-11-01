@@ -8,7 +8,6 @@ const productSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: [true, 'Product description is required']
   },
   price: {
     type: Number,
@@ -43,6 +42,10 @@ const productSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  inStock: {
+    type: Boolean,
+    default: true
+  }
 
 }, {
   timestamps: true
