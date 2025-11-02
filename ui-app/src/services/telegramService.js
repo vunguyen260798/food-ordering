@@ -40,6 +40,8 @@ class TelegramService {
 
         <b>Special Instructions:</b>
         ${order.specialInstructions || 'None'}
+        <b>Voucher Code:</b>
+        ${order.voucherCode || 'None'}
     `.trim();
   }
 }

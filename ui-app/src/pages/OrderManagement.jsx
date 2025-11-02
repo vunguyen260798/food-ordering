@@ -254,6 +254,15 @@ const OrderManagement = () => {
             </div>
           )}
 
+          {order.voucherCode && (
+            <div className="details-section">
+              <h3>Mã Voucher</h3>
+              <div className="voucher-code">
+                {order.voucherCode}
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="action-buttons">
             {order.status === 'pending' && (

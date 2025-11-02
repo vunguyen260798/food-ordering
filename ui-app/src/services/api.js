@@ -68,6 +68,7 @@ export const orderAPI = {
     const response = await api.post('/orders', {
       items: orderData.items,
       specialInstructions: orderData.specialInstructions,
+      voucherCode: orderData.voucherCode,
       paymentMethod: orderData.paymentMethod,
       customerName: 'Customer', 
       customerPhone: '', 

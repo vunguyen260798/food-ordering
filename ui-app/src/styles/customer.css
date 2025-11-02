@@ -484,6 +484,32 @@ body {
   color: var(--hint-color);
 }
 
+/* Special Instructions */
+.voucher-section {
+  margin-bottom: 24px;
+}
+
+.voucher-input {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-size: 14px;
+  resize: none;
+  transition: border-color 0.3s ease;
+}
+
+.voucher-input:focus {
+  outline: none;
+  border-color: var(--button-color);
+}
+
+.voucher-input::placeholder {
+  color: var(--hint-color);
+}
+
 /* Order Summary */
 .order-summary-section {
   margin-bottom: 24px;
@@ -678,6 +704,13 @@ body {
   background: var(--secondary-bg);
   border-color: var(--border-color);
 }
+
+[data-theme="dark"] .order-summary {
+  color: var(--text-color);
+  background: var(--secondary-bg);
+}
+
+
 
 /* Success Modal */
 .order-success-overlay {
@@ -1424,3 +1457,165 @@ body {
 [data-theme="dark"] .scan-text {
   color: #fff;
 }
+
+.payment-status {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.polling-status {
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+  color: #1976d2;
+  font-size: 14px;
+}
+
+.auto-check-notice {
+  background: #e8f5e8;
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 15px;
+  font-size: 14px;
+  color: #2e7d32;
+}
+
+.auto-check-notice p {
+  margin: 0;
+}
+
+.qr-payment-footer {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.close-button {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background: #5a6268;
+}
+
+.order-total {
+  color: var(--text-color);
+}
+
+/* Thêm vào file CSS */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+
+.confirmation-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.confirmation-header h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 1.25rem;
+}
+
+.confirmation-body {
+  margin-bottom: 24px;
+}
+
+.confirmation-body p {
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+  color: #666;
+}
+
+.warning-text {
+  color: #e74c3c !important;
+  font-size: 0.9rem;
+  background: #fdf2f2;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 4px solid #e74c3c;
+}
+
+.confirmation-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.btn-secondary {
+  padding: 10px 20px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #333;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  background: #f5f5f5;
+}
+
+.btn-primary {
+  padding: 10px 20px;
+  border: none;
+  background: #e74c3c;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background: #c0392b;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .confirmation-modal {
+  background: #2d3748;
+  color: white;
+}
+
+[data-theme="dark"] .confirmation-header h3 {
+  color: white;
+}
+
+[data-theme="dark"] .confirmation-body p {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: #4a5568;
+  color: white;
+  border-color: #718096;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background: #718096;
+}
+
