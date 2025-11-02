@@ -3,11 +3,13 @@ import React from 'react';
 const OrderForm = ({
   cart,
   specialInstructions,
+  voucherCode,
   selectedPaymentMethod,
   tax,
   finalTotal,
   onClose,
   onSpecialInstructionsChange,
+  onVoucherCodeChange,
   onPaymentMethodChange,
   onPlaceOrder
 }) => {
@@ -49,6 +51,18 @@ const OrderForm = ({
               value={specialInstructions}
               onChange={(e) => onSpecialInstructionsChange(e.target.value)}
               rows="3"
+            />
+          </div>
+
+          {/* Vourchẻ Code */}
+          <div className="voucher-section">
+            <div className="section-title">Voucher Code</div>
+            <input
+              type="text"
+              className="voucher-input"
+              placeholder="Enter voucher code"
+              value={voucherCode}
+              onChange={(e) => onVoucherCodeChange(e.target.value)}
             />
           </div>
 

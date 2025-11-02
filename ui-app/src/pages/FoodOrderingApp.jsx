@@ -22,8 +22,10 @@ const FoodOrderingApp = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [voucherCode, setVoucherCode] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('crypto');
   const [currentOrder, setCurrentOrder] = useState(null);
+  const [paymentPolling, setPaymentPolling] = useState(null);
 
   // Kiểm tra theme
   useEffect(() => {
@@ -36,7 +38,7 @@ const FoodOrderingApp = () => {
   }, []);
 
   // Áp dụng theme
-  useEffect(() => {
+  useEffect(() => { 
     if (darkMode) {
       document.documentElement.setAttribute('data-theme', 'dark');
       localStorage.setItem('theme', 'dark');
@@ -49,6 +51,14 @@ const FoodOrderingApp = () => {
   const toggleTheme = () => {
     setDarkMode(!darkMode);
   };
+
+  useEffect(() => {
+    return () => {
+      if (paymentPolling) {
+        clearTimeout(paymentPolling);
+      }
+    };
+  }, [paymentPolling]);
 
   useEffect(() => {
     fetchProducts();
@@ -133,7 +143,7 @@ const FoodOrderingApp = () => {
   };
 
   const getFinalTotal = () => {
-    return getTotalPrice() + getDeliveryFee() + getTax();
+    return getTotalPrice() + getDeliveryFee();
   };
 
   const handlePlaceOrder = async () => {
@@ -147,6 +157,7 @@ const FoodOrderingApp = () => {
           quantity: item.quantity
         })),
         specialInstructions,
+        voucherCode,
         total: getFinalTotal(),
         paymentMethod: selectedPaymentMethod
       };
@@ -159,6 +170,8 @@ const FoodOrderingApp = () => {
         
         if (selectedPaymentMethod === 'crypto') {
           setShowQRPayment(true);
+
+          startPaymentPolling(response.data._id);
         } else {
           setOrderSuccess(true);
           setCart([]);
@@ -205,6 +218,58 @@ const FoodOrderingApp = () => {
   const closeOrderSuccess = () => {
     setOrderSuccess(false);
     setCurrentOrder(null);
+  };
+
+  // Hàm polling để kiểm tra trạng thái thanh toán
+  const startPaymentPolling = (orderId) => {
+    const poll = async () => {
+      try {
+        const response = await orderAPI.checkOrderStatus(orderId);
+        
+        if (response.data.status === 'paid') {
+          // Payment thành công, đóng modal và hiển thị success
+          setOrderSuccess(true);
+          setCart([]);
+          setShowQRPayment(false);
+          setShowOrderForm(false);
+          setSpecialInstructions('');
+          setVoucherCode('');
+          setCurrentOrder(null);
+          
+          // Dừng polling
+          if (paymentPolling) {
+            clearTimeout(paymentPolling);
+            setPaymentPolling(null);
+          }
+        } else if (response.data.status === 'pending') {
+          // Tiếp tục polling sau 3 giây
+          const timeoutId = setTimeout(poll, 3000);
+          setPaymentPolling(timeoutId);
+        } else {
+          // Trạng thái khác (cancelled, expired), dừng polling
+          if (paymentPolling) {
+            clearTimeout(paymentPolling);
+            setPaymentPolling(null);
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+        const timeoutId = setTimeout(poll, 5000);
+        setPaymentPolling(timeoutId);
+      }
+    };
+
+    poll();
+  };
+
+  const handleQRPaymentClose = () => {
+    setShowQRPayment(false);
+    setCurrentOrder(null);
+    // Dừng polling khi đóng modal
+    if (paymentPolling) {
+      clearTimeout(paymentPolling);
+      setPaymentPolling(null);
+    }
   };
 
   if (orderSuccess) {
@@ -254,10 +319,12 @@ const FoodOrderingApp = () => {
         <OrderForm
           cart={cart}
           specialInstructions={specialInstructions}
+          voucherCode={voucherCode}
           selectedPaymentMethod={selectedPaymentMethod}
           tax={getTax()}
           finalTotal={getFinalTotal()}
           onClose={() => setShowOrderForm(false)}
+          onVoucherCodeChange={setVoucherCode}
           onSpecialInstructionsChange={setSpecialInstructions}
           onPaymentMethodChange={setSelectedPaymentMethod}
           onPlaceOrder={handlePlaceOrder}
@@ -273,6 +340,7 @@ const FoodOrderingApp = () => {
             setCurrentOrder(null);
           }}
           onPaymentSuccess={handleQRPaymentSuccess}
+          isPolling={!!paymentPolling}
         />
       )}
     </div>

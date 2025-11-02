@@ -186,12 +186,6 @@
   border-top: 1px solid #f0f0f0;
 }
 
-.order-total {
-  font-weight: 700;
-  color: #1a1a1a;
-  font-size: 16px;
-}
-
 .order-time {
   color: #666;
   font-size: 12px;
@@ -369,6 +363,14 @@
   border-top: 1px solid #e0e0e0;
   padding-top: 8px;
   margin-top: 8px;
+}
+
+.special-instructions {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  color: #666;
+  font-style: italic;
 }
 
 .special-instructions {

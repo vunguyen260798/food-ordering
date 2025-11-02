@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 
-const QRPayment = ({ order, finalTotal, onClose, onPaymentSuccess }) => {
+const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
   const [isExpired, setIsExpired] = useState(false);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
 
   useEffect(() => {
     if (!order?.cryptoPayment?.expiresAt) return;
@@ -31,8 +32,20 @@ const QRPayment = ({ order, finalTotal, onClose, onPaymentSuccess }) => {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    // Có thể thêm toast notification ở đây
     alert('Wallet address copied to clipboard!');
+  };
+
+  const handleCloseClick = () => {
+    setShowConfirmClose(true);
+  };
+
+  const handleConfirmClose = () => {
+    setShowConfirmClose(false);
+    onClose();
+  };
+
+  const handleCancelClose = () => {
+    setShowConfirmClose(false);
   };
 
   if (!order) return null;
@@ -42,18 +55,23 @@ const QRPayment = ({ order, finalTotal, onClose, onPaymentSuccess }) => {
       <div className="qr-payment-modal">
         <div className="qr-payment-header">
           <h2>CRYPTO PAYMENT</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
+          <button className="close-btn" onClick={handleCloseClick}>✕</button>
         </div>
         
         <div className="qr-payment-content">
-          {/* Timer */}
-          <div className="payment-timer">
+          {/* Timer and Status */}
+          <div className="payment-status">
             <div className={`timer ${isExpired ? 'expired' : 'active'}`}>
-              ⏰ Time remaining: {formatTime(timeLeft)}
+              Time remaining: {formatTime(timeLeft)}
             </div>
+            {isPolling && (
+              <div className="polling-status">
+                🔍 Automatically checking payment status...
+              </div>
+            )}
             {isExpired && (
               <div className="expired-message">
-                ❌ Payment session expired. Please create a new order.
+                Payment session expired. Please create a new order.
               </div>
             )}
           </div>
@@ -98,12 +116,11 @@ const QRPayment = ({ order, finalTotal, onClose, onPaymentSuccess }) => {
             </div>
 
             <div className="payment-instructions">
-              <h4>📋 Payment Instructions:</h4>
+              <h4>Payment Instructions:</h4>
               <ol>
                 <li>Send <strong>exactly {finalTotal} USDT</strong> to the address above</li>
                 <li>Make sure to use <strong>TRC20 network</strong></li>
                 <li>Wait for transaction confirmation (usually 2-3 minutes)</li>
-                <li>Click "I've Paid" after sending the transaction</li>
                 <li>Order will be confirmed automatically once payment is detected</li>
               </ol>
             </div>
@@ -119,31 +136,51 @@ const QRPayment = ({ order, finalTotal, onClose, onPaymentSuccess }) => {
             <div className="order-total">Total: ${finalTotal}</div>
           </div>
 
-          <div className="supported-cryptos">
-            <div className="section-title">Supported Cryptocurrencies</div>
-            <div className="crypto-list">
-              <div className="crypto-item">USDT (TRC20)</div>
-              <div className="crypto-item">TRX</div>
-            </div>
+          <div className="auto-check-notice">
+            <p><strong>Automatic Confirmation:</strong> The system will automatically detect your payment and confirm the order. No manual action required.</p>
           </div>
         </div>
 
         <div className="qr-payment-footer">
           <button 
-            className="back-button"
-            onClick={onClose}
+            className="close-button"
+            onClick={handleCloseClick}
           >
-            Cancel Order
-          </button>
-          <button 
-            className="confirm-button"
-            onClick={onPaymentSuccess}
-            disabled={isExpired}
-          >
-            {isExpired ? 'Session Expired' : 'I\'ve Paid'}
+            Close Payment
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmClose && (
+        <div className="modal-overlay">
+          <div className="confirmation-modal">
+            <div className="confirmation-header">
+              <h3>Cancel Payment?</h3>
+            </div>
+            <div className="confirmation-body">
+              <p>Are you sure you want to cancel this payment?</p>
+              <p className="warning-text">
+                <strong>Warning:</strong> If you cancel, this order will not be processed and you'll need to create a new order to complete your purchase.
+              </p>
+            </div>
+            <div className="confirmation-footer">
+              <button 
+                className="btn-secondary"
+                onClick={handleCancelClose}
+              >
+                Continue Payment
+              </button>
+              <button 
+                className="btn-primary"
+                onClick={handleConfirmClose}
+              >
+                Yes, Cancel Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

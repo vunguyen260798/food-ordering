@@ -122,6 +122,11 @@ const OrderDetails = ({ order, onClose, onUpdateStatus, onCancelOrder }) => {
                 <em>{orderData.specialInstructions}</em>
               </div>
             )}
+            {orderData.voucherCode && (
+              <div style={{ marginBottom: '15px' }}>
+                <strong>Voucher Code:</strong> {orderData.voucherCode}
+              </div>
+            )}
           </div>
         </div>
 
