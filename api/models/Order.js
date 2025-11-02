@@ -21,6 +21,7 @@ const orderSchema = new mongoose.Schema({
   customerPhone: String,
   deliveryAddress: String,
   specialInstructions: String,
+  voucherCode: String,
   
   // Tính toán tiền
   subtotal: {
