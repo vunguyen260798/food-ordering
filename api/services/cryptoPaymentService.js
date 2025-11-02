@@ -1,11 +1,11 @@
-// services/cryptoPaymentService.js
+require('dotenv').config();
 const axios = require('axios');
 const Order = require('../models/Order');
 const PaymentTransaction = require('../models/PaymentTransaction');
-const { sendTelegramNotification } = require('./telegramService');
+const telegramService = require('./telegramService');
 
-const MERCHANT_WALLET = 'TXXGsnvM3dtr5LZp13QKHnnfmqKsuYTVdk';
-const TRONGRID_API = 'https://api.trongrid.io/v1/accounts';
+const MERCHANT_WALLET = process.env.MERCHANT_WALLET;
+const TRONGRID_API = process.env.TRONGRID_API;
 
 class CryptoPaymentService {
   async checkCryptoPayments() {
@@ -111,7 +111,7 @@ class CryptoPaymentService {
       await order.save();
 
       // Gửi notification đến Telegram
-      await sendTelegramNotification(order, matchingTransaction, paymentTransaction);
+      await telegramService.sendNotification(order, matchingTransaction, paymentTransaction);
       
       console.log(`✅ Order ${order._id} marked as paid, transaction saved: ${paymentTransaction._id}`);
     } else {

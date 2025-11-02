@@ -14,6 +14,7 @@ const createOrder = async (req, res) => {
       customerPhone, 
       deliveryAddress, 
       specialInstructions,
+      voucherCode,
       paymentMethod
     } = req.body;
 
@@ -47,7 +48,8 @@ const createOrder = async (req, res) => {
         quantity: item.quantity,
         subtotal: itemSubtotal,
         customizations: item.customizations || [],
-        specialRequest: item.specialRequest || ''
+        specialRequest: item.specialRequest || '',
+        voucherCode: voucherCode || ''
       });
 
       orderItemIds.push(orderItem._id);
@@ -76,6 +78,7 @@ const createOrder = async (req, res) => {
       deliveryFee,
       totalAmount,
       specialInstructions: specialInstructions || '',
+      voucherCode: voucherCode || '',
       estimatedDeliveryTime,
       paymentMethod: paymentMethod || 'stripe'
     };
