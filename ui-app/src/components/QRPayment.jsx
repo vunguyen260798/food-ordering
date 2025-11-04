@@ -32,7 +32,7 @@ const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert('Wallet address copied to clipboard!');
+    alert('Copied to clipboard!');
   };
 
   const handleCloseClick = () => {
@@ -99,7 +99,10 @@ const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
           <div className="payment-details">
             <div className="payment-amount">
               <div className="amount-label">Amount to Pay</div>
-              <div className="amount-value">{finalTotal} USDT</div>
+              <div className="amount-value">{order.cryptoValue} USDT</div>
+              <div className="amount-note">
+                * Send <strong>exactly</strong> this amount for automatic confirmation
+              </div>
             </div>
             
             <div className="crypto-address">
@@ -118,16 +121,18 @@ const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
             <div className="payment-instructions">
               <h4>Payment Instructions:</h4>
               <ol>
-                <li>Send <strong>exactly {finalTotal} USDT</strong> to the address above</li>
+                <li>Send <strong>exactly {order.cryptoValue} USDT</strong> to the address above</li>
                 <li>Make sure to use <strong>TRC20 network</strong></li>
                 <li>Wait for transaction confirmation (usually 2-3 minutes)</li>
                 <li>Order will be confirmed automatically once payment is detected</li>
+                <li><strong>Important:</strong> The decimal part ({order.cryptoValue.split('.')[1]}) is your order identifier</li>
               </ol>
             </div>
           </div>
 
           <div className="order-summary">
             <h4>Order Summary:</h4>
+            <div className="order-number">Order #: {order.orderNumber}</div>
             {order.orderItems && order.orderItems.map((item, index) => (
               <div key={index} className="order-item-summary">
                 {item.productName} × {item.quantity} - ${item.productPrice}
@@ -137,7 +142,7 @@ const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
           </div>
 
           <div className="auto-check-notice">
-            <p><strong>Automatic Confirmation:</strong> The system will automatically detect your payment and confirm the order. No manual action required.</p>
+            <p><strong>Automatic Confirmation:</strong> The system will automatically detect your payment and confirm the order using the unique amount {order.cryptoValue}.</p>
           </div>
         </div>
 
