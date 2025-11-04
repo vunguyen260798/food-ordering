@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Counter = require('./Counter');
+
 const orderSchema = new mongoose.Schema({
   orderNumber: {
     type: String,
@@ -88,16 +89,11 @@ const orderSchema = new mongoose.Schema({
   }
 });
 
-// Tạo orderNumber và cryptoValue tự động trước khi save
+// Trong orderSchema.pre('save')
 orderSchema.pre('save', async function(next) {
   if (this.isNew) {
-    // Tạo orderNumber
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    this.orderNumber = `ORD-${timestamp}-${random}`.toUpperCase();
-    
-    // Tạo cryptoValue nếu là thanh toán crypto
-    if (this.paymentMethod === 'crypto') {
+    try {
+      // Tạo orderNumber 6 chữ số tăng dần
       const counter = await Counter.findByIdAndUpdate(
         { _id: 'orderSequence' },
         { $inc: { sequence_value: 1 } },
@@ -105,7 +101,26 @@ orderSchema.pre('save', async function(next) {
       );
       
       const orderSequence = counter.sequence_value.toString().padStart(6, '0');
-      this.cryptoValue = `${this.totalAmount}.${orderSequence}`;
+      this.orderNumber = orderSequence;
+      
+      // Tạo cryptoValue nếu là thanh toán crypto
+      if (this.paymentMethod === 'crypto') {
+        // Format số tiền để hiển thị cho người dùng
+        const integerPart = Math.floor(this.totalAmount);
+        const decimalPart = Math.round((this.totalAmount - integerPart) * 100);
+        
+        // cryptoValue hiển thị: 15.000001, 25.500002, etc.
+        this.cryptoValue = `${integerPart}.${decimalPart.toString().padStart(2, '0')}${orderSequence}`;
+        
+        // API sẽ nhận được: 15000001, 25500002, etc.
+        
+        // Thiết lập thời gian hết hạn (10 phút)
+        this.cryptoPayment = this.cryptoPayment || {};
+        this.cryptoPayment.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        this.cryptoPayment.expectedAmount = parseFloat(this.cryptoValue);
+      }
+    } catch (error) {
+      return next(error);
     }
   }
   next();
