@@ -14,7 +14,8 @@ class CryptoPaymentService {
       
       const pendingOrders = await Order.find({
         status: 'pending',
-        paymentMethod: 'crypto'
+        paymentMethod: 'crypto',
+        'cryptoPayment.expiresAt': { $gt: new Date() } // Chỉ lấy orders chưa hết hạn
       });
 
       if (pendingOrders.length === 0) {
@@ -29,7 +30,7 @@ class CryptoPaymentService {
         `${TRONGRID_API}/${MERCHANT_WALLET}/transactions/trc20`,
         {
           params: {
-            limit: 20,
+            limit: 50, // Tăng limit để tìm nhiều transaction hơn
             order_by: 'block_timestamp,desc'
           },
           timeout: 10000
@@ -72,17 +73,17 @@ class CryptoPaymentService {
         return;
       }
 
-      // Lấy giá trị từ API (số nguyên)
-      const apiValue = parseInt(tx.value);
-      console.log(`🔍 Processing transaction ${tx.transaction_id} with API value: ${apiValue}`);
+      // Lấy giá trị từ API và chuyển đổi sang USDT
+      const txValue = parseInt(tx.value);
+      const receivedAmountUSDT = txValue / 1000000; // USDT có 6 decimals
+      
+      console.log(`🔍 Processing transaction ${tx.transaction_id} with amount: ${receivedAmountUSDT} USDT`);
 
-      // Tìm order khớp với giá trị từ API
-      const matchingOrder = await this.findOrderByApiValue(apiValue, pendingOrders);
+      // Tìm order khớp với transaction
+      const matchingOrder = await this.findOrderByTransaction(receivedAmountUSDT, pendingOrders);
 
       if (matchingOrder) {
-        await this.confirmPayment(matchingOrder, tx, apiValue);
-      } else {
-        console.log(`❌ No matching order found for API value: ${apiValue}`);
+        await this.confirmPayment(matchingOrder, tx, receivedAmountUSDT);
       }
 
     } catch (error) {
@@ -90,49 +91,48 @@ class CryptoPaymentService {
     }
   }
 
-  async findOrderByApiValue(apiValue, pendingOrders) {
-    // Chuyển đổi API value thành order code
-    const orderCode = this.extractOrderCodeFromApiValue(apiValue);
-    console.log(`🔍 Extracted order code from API value ${apiValue}: ${orderCode}`);
-
-    if (!orderCode) {
-      return null;
+  async findOrderByTransaction(receivedAmountUSDT, pendingOrders) {
+    for (const order of pendingOrders) {
+      // Tính toán order code từ số tiền nhận được
+      const extractedOrderCode = this.calculateOrderCode(receivedAmountUSDT, order.totalAmount);
+      
+      if (extractedOrderCode && extractedOrderCode === order.orderNumber) {
+        console.log(`✅ Found matching order: ${order._id}, Order code: ${order.orderNumber}`);
+        return order;
+      }
     }
-
-    // Tìm order với orderNumber khớp
-    const matchingOrder = pendingOrders.find(order => 
-      order.orderNumber === orderCode
-    );
-
-    return matchingOrder;
+    
+    return null;
   }
 
-  extractOrderCodeFromApiValue(apiValue) {
+  calculateOrderCode(receivedAmountUSDT, orderAmount) {
     try {
-      // Chuyển số nguyên thành chuỗi
-      const valueStr = apiValue.toString();
+      // Công thức: (received_amount - order_amount) = 0.order_code
+      const difference = receivedAmountUSDT - orderAmount;
       
-      // Logic: 6 chữ số cuối là order code
-      if (valueStr.length <= 6) {
-        // Nếu giá trị quá nhỏ, pad left với zeros
-        return valueStr.padStart(6, '0');
+      console.log(`   📊 Amount diff: ${receivedAmountUSDT} - ${orderAmount} = ${difference}`);
+      
+      // Nếu difference là số dương rất nhỏ (0.000001 đến 0.999999)
+      if (difference > 0 && difference < 1) {
+        // Chuyển phần thập phân thành 6 chữ số
+        const decimalPart = difference.toFixed(6).split('.')[1];
+        const orderCode = decimalPart.padStart(6, '0');
+        
+        console.log(`   🔍 Extracted order code: ${orderCode}`);
+        return orderCode;
       }
       
-      // Lấy 6 chữ số cuối làm order code
-      const orderCode = valueStr.slice(-6);
-      return orderCode.padStart(6, '0');
+      return null;
       
     } catch (error) {
-      console.error('Error extracting order code:', error);
+      console.error('Error calculating order code:', error);
       return null;
     }
   }
 
-  async confirmPayment(order, transaction, apiValue) {
+  async confirmPayment(order, transaction, receivedAmountUSDT) {
     try {
-      const receivedAmountUSDT = apiValue / 1000000; // USDT có 6 decimals
-      
-      console.log(`✅ Found matching order ${order._id} for transaction ${transaction.transaction_id}`);
+      console.log(`✅ Confirming payment for order ${order._id}`);
       
       // Tạo payment transaction record
       const paymentTransaction = await PaymentTransaction.create({
@@ -164,24 +164,6 @@ class CryptoPaymentService {
     } catch (error) {
       console.error('Error confirming payment:', error);
     }
-  }
-
-  // Helper function để debug
-  debugValueConversion() {
-    const testCases = [
-      { apiValue: 15000001, expectedOrderCode: '000001' },
-      { apiValue: 25500002, expectedOrderCode: '000002' },
-      { apiValue: 100000003, expectedOrderCode: '000003' },
-      { apiValue: 75250123, expectedOrderCode: '000123' },
-      { apiValue: 75361111, expectedOrderCode: '111111' }
-    ];
-
-    console.log('\n🧪 DEBUG Value Conversion:');
-    testCases.forEach(test => {
-      const extracted = this.extractOrderCodeFromApiValue(test.apiValue);
-      const status = extracted === test.expectedOrderCode ? '✅' : '❌';
-      console.log(`${status} API: ${test.apiValue} -> Order: ${extracted} (expected: ${test.expectedOrderCode})`);
-    });
   }
 
   async expireOldOrders() {

@@ -105,14 +105,11 @@ orderSchema.pre('save', async function(next) {
       
       // Tạo cryptoValue nếu là thanh toán crypto
       if (this.paymentMethod === 'crypto') {
-        // Format số tiền để hiển thị cho người dùng
-        const integerPart = Math.floor(this.totalAmount);
-        const decimalPart = Math.round((this.totalAmount - integerPart) * 100);
+        // Đảm bảo totalAmount có 2 chữ số thập phân
+        const formattedAmount = this.totalAmount.toFixed(2);
         
-        // cryptoValue hiển thị: 15.000001, 25.500002, etc.
-        this.cryptoValue = `${integerPart}.${decimalPart.toString().padStart(2, '0')}${orderSequence}`;
-        
-        // API sẽ nhận được: 15000001, 25500002, etc.
+        // cryptoValue = order_amount + 0.order_code
+        this.cryptoValue = (parseFloat(formattedAmount) + parseInt(orderSequence) / 1000000).toFixed(6);
         
         // Thiết lập thời gian hết hạn (10 phút)
         this.cryptoPayment = this.cryptoPayment || {};
