@@ -6,6 +6,7 @@ const productController = require('../controllers/productController');
 const orderController = require('../controllers/orderController');
 const paymentController = require('../controllers/paymentController');
 const partnerController = require('../controllers/partnerController');
+const testController = require('../controllers/testController');
 
 // Product routes
 router.get('/products', productController.getProducts);
@@ -32,5 +33,8 @@ router.get('/partners/:id', partnerController.getPartnerById);
 router.post('/partners', partnerController.createPartner);
 router.put('/partners/:id', partnerController.updatePartner);
 router.delete('/partners/:id', partnerController.deletePartner);
+
+// Test routes
+router.get('/test', testController.getTest);
 
 module.exports = router;

@@ -10,7 +10,7 @@ const TRONGRID_API = process.env.TRONGRID_API;
 class CryptoPaymentService {
   async checkCryptoPayments() {
     try {
-      console.log('🔍 Checking for crypto payments...');
+      // console.log('🔍 Checking for crypto payments...');
       
       const pendingOrders = await Order.find({
         status: 'pending',
@@ -26,8 +26,10 @@ class CryptoPaymentService {
       console.log(` Found ${pendingOrders.length} pending crypto orders`);
 
       // Lấy transactions từ TronGrid
+      // const response = await axios.get(
+      //   `${TRONGRID_API}/${MERCHANT_WALLET}/transactions/trc20`,
       const response = await axios.get(
-        `${TRONGRID_API}/${MERCHANT_WALLET}/transactions/trc20`,
+        'http://localhost:5000/api/test',
         {
           params: {
             limit: 50, // Tăng limit để tìm nhiều transaction hơn
@@ -77,7 +79,7 @@ class CryptoPaymentService {
       const txValue = parseInt(tx.value);
       const receivedAmountUSDT = txValue / 1000000; // USDT có 6 decimals
       
-      console.log(`🔍 Processing transaction ${tx.transaction_id} with amount: ${receivedAmountUSDT} USDT`);
+      // console.log(`🔍 Processing transaction ${tx.transaction_id} with amount: ${receivedAmountUSDT} USDT`);
 
       // Tìm order khớp với transaction
       const matchingOrder = await this.findOrderByTransaction(receivedAmountUSDT, pendingOrders);
@@ -97,7 +99,7 @@ class CryptoPaymentService {
       const extractedOrderCode = this.calculateOrderCode(receivedAmountUSDT, order.totalAmount);
       
       if (extractedOrderCode && extractedOrderCode === order.orderNumber) {
-        console.log(`✅ Found matching order: ${order._id}, Order code: ${order.orderNumber}`);
+        // console.log(`✅ Found matching order: ${order._id}, Order code: ${order.orderNumber}`);
         return order;
       }
     }
@@ -110,7 +112,7 @@ class CryptoPaymentService {
       // Công thức: (received_amount - order_amount) = 0.order_code
       const difference = receivedAmountUSDT - orderAmount;
       
-      console.log(`   📊 Amount diff: ${receivedAmountUSDT} - ${orderAmount} = ${difference}`);
+      // console.log(`   📊 Amount diff: ${receivedAmountUSDT} - ${orderAmount} = ${difference}`);
       
       // Nếu difference là số dương rất nhỏ (0.000001 đến 0.999999)
       if (difference > 0 && difference < 1) {
@@ -118,7 +120,7 @@ class CryptoPaymentService {
         const decimalPart = difference.toFixed(6).split('.')[1];
         const orderCode = decimalPart.padStart(6, '0');
         
-        console.log(`   🔍 Extracted order code: ${orderCode}`);
+        // console.log(`   🔍 Extracted order code: ${orderCode}`);
         return orderCode;
       }
       
@@ -132,7 +134,7 @@ class CryptoPaymentService {
 
   async confirmPayment(order, transaction, receivedAmountUSDT) {
     try {
-      console.log(`✅ Confirming payment for order ${order._id}`);
+      // console.log(`✅ Confirming payment for order ${order._id}`);
       
       // Tạo payment transaction record
       const paymentTransaction = await PaymentTransaction.create({
@@ -159,7 +161,7 @@ class CryptoPaymentService {
       // Gửi notification đến Telegram
       await telegramService.sendNotification(order, transaction, paymentTransaction);
       
-      console.log(`✅ Order ${order._id} marked as paid, transaction saved: ${paymentTransaction._id}`);
+      // console.log(`✅ Order ${order._id} marked as paid, transaction saved: ${paymentTransaction._id}`);
       
     } catch (error) {
       console.error('Error confirming payment:', error);
