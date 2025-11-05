@@ -43,9 +43,9 @@ class CryptoPaymentService {
       const transactions = response.data.data;
       console.log(` Found ${transactions.length} recent transactions`);
 
-      // Xử lý từng order pending
-      for (const order of pendingOrders) {
-        await this.processOrderPayment(order, transactions);
+      // Xử lý từng transaction để tìm order phù hợp
+      for (const tx of transactions) {
+        await this.processTransaction(tx, pendingOrders);
       }
 
     } catch (error) {
@@ -53,52 +53,98 @@ class CryptoPaymentService {
     }
   }
 
-  async processOrderPayment(order, transactions) {
-    if (!order.cryptoValue) {
-      console.log(`❌ Order ${order._id} missing cryptoValue`);
-      return;
-    }
-
-    console.log(`🔍 Processing order ${order._id} with cryptoValue: ${order.cryptoValue}`);
-
-    // Tìm transaction khớp với cryptoValue
-    const matchingTransaction = transactions.find(tx => {
-      const receivedAmountUSDT = parseInt(tx.value) / 100000000;
-      
-      return (
-        tx.to === MERCHANT_WALLET &&
-        tx.token_info.symbol === 'USDT' &&
-        tx.type === 'Transfer' &&
-        this.isValueMatch(receivedAmountUSDT, order.cryptoValue)
-      );
-    });
-
-    if (matchingTransaction) {
-      const receivedAmountUSDT = parseInt(matchingTransaction.value) / 100000000;
-      
-      // Kiểm tra xem transaction đã được lưu chưa
-      const existingTransaction = await PaymentTransaction.findOne({
-        transactionId: matchingTransaction.transaction_id
-      });
-
-      if (existingTransaction) {
-        console.log(`⚠️ Transaction ${matchingTransaction.transaction_id} already processed`);
+  async processTransaction(tx, pendingOrders) {
+    try {
+      // Kiểm tra transaction cơ bản
+      if (tx.to !== MERCHANT_WALLET || 
+          tx.token_info?.symbol !== 'USDT' || 
+          tx.type !== 'Transfer') {
         return;
       }
 
-      console.log(`✅ Found matching transaction for order ${order._id}`);
+      // Kiểm tra xem transaction đã được xử lý chưa
+      const existingTransaction = await PaymentTransaction.findOne({
+        transactionId: tx.transaction_id
+      });
+
+      if (existingTransaction) {
+        console.log(`⚠️ Transaction ${tx.transaction_id} already processed`);
+        return;
+      }
+
+      // Lấy giá trị từ API (số nguyên)
+      const apiValue = parseInt(tx.value);
+      console.log(`🔍 Processing transaction ${tx.transaction_id} with API value: ${apiValue}`);
+
+      // Tìm order khớp với giá trị từ API
+      const matchingOrder = await this.findOrderByApiValue(apiValue, pendingOrders);
+
+      if (matchingOrder) {
+        await this.confirmPayment(matchingOrder, tx, apiValue);
+      } else {
+        console.log(`❌ No matching order found for API value: ${apiValue}`);
+      }
+
+    } catch (error) {
+      console.error('Error processing transaction:', error);
+    }
+  }
+
+  async findOrderByApiValue(apiValue, pendingOrders) {
+    // Chuyển đổi API value thành order code
+    const orderCode = this.extractOrderCodeFromApiValue(apiValue);
+    console.log(`🔍 Extracted order code from API value ${apiValue}: ${orderCode}`);
+
+    if (!orderCode) {
+      return null;
+    }
+
+    // Tìm order với orderNumber khớp
+    const matchingOrder = pendingOrders.find(order => 
+      order.orderNumber === orderCode
+    );
+
+    return matchingOrder;
+  }
+
+  extractOrderCodeFromApiValue(apiValue) {
+    try {
+      // Chuyển số nguyên thành chuỗi
+      const valueStr = apiValue.toString();
+      
+      // Logic: 6 chữ số cuối là order code
+      if (valueStr.length <= 6) {
+        // Nếu giá trị quá nhỏ, pad left với zeros
+        return valueStr.padStart(6, '0');
+      }
+      
+      // Lấy 6 chữ số cuối làm order code
+      const orderCode = valueStr.slice(-6);
+      return orderCode.padStart(6, '0');
+      
+    } catch (error) {
+      console.error('Error extracting order code:', error);
+      return null;
+    }
+  }
+
+  async confirmPayment(order, transaction, apiValue) {
+    try {
+      const receivedAmountUSDT = apiValue / 1000000; // USDT có 6 decimals
+      
+      console.log(`✅ Found matching order ${order._id} for transaction ${transaction.transaction_id}`);
       
       // Tạo payment transaction record
       const paymentTransaction = await PaymentTransaction.create({
-        transactionId: matchingTransaction.transaction_id,
+        transactionId: transaction.transaction_id,
         order: order._id,
         amount: receivedAmountUSDT,
-        fromAddress: matchingTransaction.from,
-        toAddress: matchingTransaction.to,
-        tokenSymbol: matchingTransaction.token_info.symbol,
-        rawValue: matchingTransaction.value,
-        decimals: matchingTransaction.token_info.decimals,
-        blockTimestamp: new Date(matchingTransaction.block_timestamp),
+        fromAddress: transaction.from,
+        toAddress: transaction.to,
+        tokenSymbol: transaction.token_info.symbol,
+        rawValue: transaction.value,
+        decimals: transaction.token_info.decimals,
+        blockTimestamp: new Date(transaction.block_timestamp),
         status: 'confirmed'
       });
 
@@ -106,28 +152,36 @@ class CryptoPaymentService {
       order.status = 'paid';
       order.paymentTransaction = paymentTransaction._id;
       order.cryptoPayment.receivedAmount = receivedAmountUSDT;
-      order.cryptoPayment.transactionHash = matchingTransaction.transaction_id;
+      order.cryptoPayment.transactionHash = transaction.transaction_id;
       
       await order.save();
 
       // Gửi notification đến Telegram
-      await telegramService.sendNotification(order, matchingTransaction, paymentTransaction);
+      await telegramService.sendNotification(order, transaction, paymentTransaction);
       
       console.log(`✅ Order ${order._id} marked as paid, transaction saved: ${paymentTransaction._id}`);
-    } else {
-      console.log(`❌ No matching transaction found for order ${order._id}`);
+      
+    } catch (error) {
+      console.error('Error confirming payment:', error);
     }
   }
 
-  isValueMatch(receivedAmount, expectedCryptoValue) {
-    try {
-      const expectedParts = expectedCryptoValue.split('.');
-      const expectedInteger = parseFloat(expectedParts[0]);
-      return receivedAmount === expectedInteger;
-    } catch (error) {
-      console.error('Error comparing values:', error);
-      return false;
-    }
+  // Helper function để debug
+  debugValueConversion() {
+    const testCases = [
+      { apiValue: 15000001, expectedOrderCode: '000001' },
+      { apiValue: 25500002, expectedOrderCode: '000002' },
+      { apiValue: 100000003, expectedOrderCode: '000003' },
+      { apiValue: 75250123, expectedOrderCode: '000123' },
+      { apiValue: 75361111, expectedOrderCode: '111111' }
+    ];
+
+    console.log('\n🧪 DEBUG Value Conversion:');
+    testCases.forEach(test => {
+      const extracted = this.extractOrderCodeFromApiValue(test.apiValue);
+      const status = extracted === test.expectedOrderCode ? '✅' : '❌';
+      console.log(`${status} API: ${test.apiValue} -> Order: ${extracted} (expected: ${test.expectedOrderCode})`);
+    });
   }
 
   async expireOldOrders() {
