@@ -47,9 +47,9 @@ export const productAPI = {
 
 // Order API functions
 export const orderAPI = {
-  // Get all orders with optional filters
-  getAllOrders: async (status = '', paymentStatus = '') => {
-    const params = {};
+  // Get all orders with optional filters and pagination
+  getAllOrders: async (status = '', paymentStatus = '', page = 1, limit = 10) => {
+    const params = { page, limit };
     if (status) params.status = status;
     if (paymentStatus) params.paymentStatus = paymentStatus;
     

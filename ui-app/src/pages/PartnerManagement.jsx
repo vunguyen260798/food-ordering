@@ -116,29 +116,7 @@ const PartnerManagement = () => {
             </button>
           </div>
 
-          <form onSubmit={handleSearch} className="search-container">
-            <input
-              type="text"
-              placeholder="Search partners by code or username..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-            <button type="submit" className="btn btn-primary">Search</button>
-            {searchTerm && (
-              <button 
-                type="button" 
-                className="btn btn-secondary"
-                onClick={() => {
-                  setSearchTerm('');
-                  fetchPartners('');
-                }}
-              >
-                Clear
-              </button>
-            )}
-          </form>
-
+      
           {loading ? (
             <div className="loading">Loading partners...</div>
           ) : (

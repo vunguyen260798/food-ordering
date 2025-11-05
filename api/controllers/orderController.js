@@ -128,7 +128,7 @@ const createOrder = async (req, res) => {
 // @access  Private
 const getOrders = async (req, res) => {
   try {
-    const { status, paymentMethod } = req.query;
+    const { status, paymentMethod, page = 1, limit = 10 } = req.query;
     let query = {};
 
     if (status) {
@@ -139,14 +139,40 @@ const getOrders = async (req, res) => {
       query.paymentMethod = paymentMethod;
     }
 
+    // Convert page and limit to numbers
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    
+    // Calculate skip value
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get total count for pagination
+    const totalOrders = await Order.countDocuments(query);
+
+    // Fetch paginated orders
     const orders = await Order.find(query)
       .populate('orderItems')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalOrders / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
 
     res.status(200).json({
       success: true,
       count: orders.length,
-      data: orders
+      data: orders,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalOrders,
+        limit: limitNum,
+        hasNextPage,
+        hasPrevPage
+      }
     });
   } catch (error) {
     res.status(500).json({

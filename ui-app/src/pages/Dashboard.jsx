@@ -82,19 +82,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-        <h3 style={{ marginBottom: '15px', color: '#2c3e50' }}>Quick Actions</h3>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <a href="/products" className="btn btn-primary">Manage Products</a>
-          <a href="/orders" className="btn btn-success">View Orders</a>
-          <button 
-            className="btn btn-warning"
-            onClick={fetchDashboardData}
-          >
-            Refresh Data
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
