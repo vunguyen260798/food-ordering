@@ -12,6 +12,14 @@ const OrderManagement = () => {
     status: '',
     search: ''
   });
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalOrders: 0,
+    limit: 10,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
 
   const statusOptions = [
     { value: '', label: 'Tất cả đơn hàng', color: '#666' },
@@ -27,18 +35,30 @@ const OrderManagement = () => {
     fetchOrders();
   }, []);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = pagination.currentPage) => {
     try {
       setLoading(true);
       setError('');
-      const response = await orderAPI.getAllOrders(filters.status);
+      const response = await orderAPI.getAllOrders(filters.status, '', page, pagination.limit);
       setOrders(response.data || []);
+      if (response.pagination) {
+        setPagination(response.pagination);
+      }
     } catch (err) {
       setError('Failed to fetch orders');
       console.error('Fetch orders error:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    fetchOrders(newPage);
+  };
+
+  const handleLimitChange = (newLimit) => {
+    setPagination(prev => ({ ...prev, limit: newLimit, currentPage: 1 }));
+    setTimeout(() => fetchOrders(1), 100);
   };
 
   const handleFilterChange = (e) => {
@@ -50,7 +70,8 @@ const OrderManagement = () => {
   };
 
   const applyFilters = () => {
-    fetchOrders();
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    fetchOrders(1);
   };
 
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
@@ -116,44 +137,60 @@ const OrderManagement = () => {
     });
   };
 
-  // Order Card Component
-  const OrderCard = ({ order }) => (
-    <div className="order-card" onClick={() => handleViewOrder(order)}>
-      <div className="order-header">
-        <div className="order-id">#{order._id.slice(-8)}</div>
-        <div 
-          className="order-status"
-          style={{ backgroundColor: getStatusColor(order.status) }}
-        >
-          {getStatusLabel(order.status)}
-        </div>
-      </div>
-      
-      <div className="order-customer">
-        <div className="customer-name">{order.customerName}</div>
-        <div className="customer-phone">{order.customerPhone}</div>
-      </div>
-
-      <div className="order-items">
-        {order.orderItems && order.orderItems.slice(0, 2).map((item, index) => (
-          <div key={index} className="order-item">
-            <span className="item-name">{item.productName}</span>
-            <span className="item-quantity">x{item.quantity}</span>
-          </div>
-        ))}
-        {order.orderItems && order.orderItems.length > 2 && (
-          <div className="more-items">+{order.orderItems.length - 2} món khác</div>
-        )}
-      </div>
-
-      <div className="order-footer">
-        <div className="order-total">
-          {formatCurrency(order.totalAmount)}
-        </div>
-        <div className="order-time">
-          {formatDate(order.createdAt)}
-        </div>
-      </div>
+  // Order Table Component
+  const OrderTable = ({ orders }) => (
+    <div className="table-container">
+      <table className="orders-table">
+        <thead>
+          <tr>
+            <th>Mã đơn</th>
+            <th>Khách hàng</th>
+            <th>SĐT</th>
+            <th>Món ăn</th>
+            <th>Tổng tiền</th>
+            <th>Trạng thái</th>
+            <th>Thời gian</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map(order => (
+            <tr key={order._id}>
+              <td className="order-id">#{order._id.slice(-8)}</td>
+              <td>{order.customerName}</td>
+              <td>{order.customerPhone}</td>
+              <td className="order-items-cell">
+                {order.orderItems && order.orderItems.slice(0, 2).map((item, index) => (
+                  <div key={index} className="item-row">
+                    {item.productName} x{item.quantity}
+                  </div>
+                ))}
+                {order.orderItems && order.orderItems.length > 2 && (
+                  <div className="more-items-text">+{order.orderItems.length - 2} món khác</div>
+                )}
+              </td>
+              <td className="order-total">{formatCurrency(order.totalAmount)}</td>
+              <td>
+                <span 
+                  className="status-badge"
+                  style={{ backgroundColor: getStatusColor(order.status) }}
+                >
+                  {getStatusLabel(order.status)}
+                </span>
+              </td>
+              <td className="order-time">{formatDate(order.createdAt)}</td>
+              <td>
+                <button 
+                  className="view-btn"
+                  onClick={() => handleViewOrder(order)}
+                >
+                  Chi tiết
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 
@@ -312,10 +349,10 @@ const OrderManagement = () => {
   );
 
   return (
-    <div className="order-management">
-      <div className="order-header">
-        <h1>Quản lý đơn hàng</h1>
-        <p>Theo dõi và quản lý đơn hàng của khách hàng</p>
+    <div>
+      <div className="page-header">
+        <h1>Order Management</h1>
+        <p>Track and manage customer orders</p>
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -325,7 +362,7 @@ const OrderManagement = () => {
         <>
           {/* Filters */}
           <div className="filters-section">
-            <div className="search-box">
+            {/* <div className="search-box">
               <input
                 type="text"
                 name="search"
@@ -334,7 +371,7 @@ const OrderManagement = () => {
                 placeholder="Tìm kiếm đơn hàng..."
                 className="search-input"
               />
-            </div>
+            </div> */}
             
             <div className="status-filters">
               {statusOptions.map(status => (
@@ -360,7 +397,7 @@ const OrderManagement = () => {
             </button>
           </div>
 
-          {/* Orders Grid */}
+          {/* Orders Table */}
           {loading ? (
             <div className="loading">Đang tải đơn hàng...</div>
           ) : orders.length === 0 ? (
@@ -370,11 +407,61 @@ const OrderManagement = () => {
               <p>Chưa có đơn hàng nào phù hợp với bộ lọc</p>
             </div>
           ) : (
-            <div className="orders-grid">
-              {orders.map(order => (
-                <OrderCard key={order._id} order={order} />
-              ))}
-            </div>
+            <>
+              <OrderTable orders={orders} />
+              
+              {/* Pagination Controls */}
+              <div className="pagination-container">
+             
+                <div className="pagination-controls">
+                  <button
+                    className="pagination-btn"
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={!pagination.hasPrevPage}
+                  >
+                    ← Trước
+                  </button>
+                  
+                  <div className="pagination-pages">
+                    {[...Array(pagination.totalPages)].map((_, index) => {
+                      const pageNum = index + 1;
+                      // Show first page, last page, current page, and pages around current
+                      if (
+                        pageNum === 1 ||
+                        pageNum === pagination.totalPages ||
+                        (pageNum >= pagination.currentPage - 1 && pageNum <= pagination.currentPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={pageNum}
+                            className={`pagination-page ${pagination.currentPage === pageNum ? 'active' : ''}`}
+                            onClick={() => handlePageChange(pageNum)}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      } else if (
+                        pageNum === pagination.currentPage - 2 ||
+                        pageNum === pagination.currentPage + 2
+                      ) {
+                        return <span key={pageNum} className="pagination-ellipsis">...</span>;
+                      }
+                      return null;
+                    })}
+                  </div>
+                  
+                  <button
+                    className="pagination-btn"
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={!pagination.hasNextPage}
+                  >
+                    Tiếp →
+                  </button>
+                </div>
+                
+              
+              </div>
+            </>
           )}
         </>
       ) : (

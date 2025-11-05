@@ -40,14 +40,6 @@ const Sidebar = () => {
               📦 Partner Management
             </NavLink>
           </li>
-          <li>
-            <NavLink 
-              to="/" 
-              style={{ borderTop: '1px solid #34495e', marginTop: '20px', paddingTop: '20px' }}
-            >
-              🌐 View Customer Site
-            </NavLink>
-          </li>
         </ul>
       </nav>
     </div>

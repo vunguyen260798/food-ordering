@@ -1,9 +1,5 @@
 /* Order Management Styles */
-.order-management {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
+/* Removed .order-management wrapper to use default page padding */
 
 .order-header {
   text-align: center;
@@ -94,11 +90,84 @@
   transform: translateY(-1px);
 }
 
-/* Orders Grid */
-.orders-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 16px;
+/* Orders Table */
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.orders-table th,
+.orders-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.orders-table th {
+  background-color: #34495e;
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.orders-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.orders-table td {
+  color: #2c3e50;
+}
+
+.order-items-cell {
+  max-width: 200px;
+}
+
+.item-row {
+  font-size: 13px;
+  color: #2c3e50;
+  margin-bottom: 2px;
+}
+
+.more-items-text {
+  font-size: 12px;
+  color: #7f8c8d;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.order-total {
+  font-weight: 600;
+  color: #27ae60;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.view-btn {
+  padding: 6px 12px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+  background-color: #2980b9;
 }
 
 /* Order Card */
@@ -483,16 +552,118 @@
   margin-bottom: 16px;
 }
 
+/* Pagination Styles */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pagination-info {
+  color: #666;
+  font-size: 14px;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  background: #007AFF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #0056CC;
+  transform: translateY(-1px);
+}
+
+.pagination-btn:disabled {
+  background: #e0e0e0;
+  color: #999;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-page {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  background: white;
+  color: #333;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.pagination-page:hover {
+  background: #f8f9fa;
+  border-color: #007AFF;
+}
+
+.pagination-page.active {
+  background: #007AFF;
+  color: white;
+  border-color: #007AFF;
+}
+
+.pagination-ellipsis {
+  padding: 0 8px;
+  color: #999;
+}
+
+.pagination-limit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.limit-select {
+  padding: 6px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.limit-select:focus {
+  outline: none;
+  border-color: #007AFF;
+}
+
+.limit-select:hover {
+  border-color: #007AFF;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
-  .order-management {
-    padding: 16px;
-  }
-  
-  .orders-grid {
-    grid-template-columns: 1fr;
-  }
-  
   .filters-section {
     padding: 16px;
   }
@@ -510,5 +681,19 @@
   
   .action-buttons {
     flex-direction: column;
+  }
+  
+  .pagination-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .pagination-controls {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .pagination-pages {
+    display: none;
   }
 }
