@@ -1,4 +1,4 @@
-const morkData = {
+const mockData = {
     "data": [
         {
             "transaction_id": "bb3a067357a29ad1faa1a08952eae79abec049535dc8a6ccb85183e66de9b339",
@@ -34,7 +34,7 @@ const morkData = {
 const getTest = async (req, res) => {
     try {
         // Simulate fetching data from an external API
-        const transactions = morkData.data;
+        const transactions = mockData.data;
         res.status(200).json({
             success: true,
             data: transactions
