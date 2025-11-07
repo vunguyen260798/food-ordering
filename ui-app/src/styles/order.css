@@ -697,3 +697,7 @@
     display: none;
   }
 }
+
+[data-theme="dark"] .order-items-list {
+  background: var(--secondary-bg);
+}

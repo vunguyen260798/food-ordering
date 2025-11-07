@@ -47,6 +47,7 @@ const createOrder = async (req, res) => {
         productPrice: product.price,
         quantity: item.quantity,
         subtotal: itemSubtotal,
+        deliveryAddress: item.deliveryAddress || '',
         customizations: item.customizations || [],
         specialRequest: item.specialRequest || '',
         voucherCode: voucherCode || ''
