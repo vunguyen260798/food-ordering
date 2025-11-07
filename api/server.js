@@ -51,13 +51,13 @@ app.listen(PORT, () => {
 });
 
 
-// Chạy mỗi 30 giây để kiểm tra payment
-cron.schedule('*/5 * * * * *', () => {
+// Chạy mỗi 1 phút để kiểm tra payment
+cron.schedule('*/1 * * * *', () => {
   cryptoPaymentService.checkCryptoPayments();
 });
 
-// Chạy mỗi phút để đánh dấu order hết hạn
-cron.schedule('* * * * *', () => {
+// Chạy mỗi 5 phút để đánh dấu order hết hạn
+cron.schedule('*/2 * * * *', () => {
   cryptoPaymentService.expireOldOrders();
 });
 
