@@ -26,6 +26,50 @@ const FoodOrderingApp = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('crypto');
   const [currentOrder, setCurrentOrder] = useState(null);
   const [paymentPolling, setPaymentPolling] = useState(null);
+  const [deliveryAddress, setDeliveryAddress] = useState(null);
+
+  const handleAddressUpdate = (address) => {
+    setDeliveryAddress(address);
+  };
+  const handleUseCurrentLocation = () => {
+    // Integration với Telegram Web App để lấy vị trí hiện tại
+    if (window.Telegram && window.Telegram.WebApp) {
+      const webApp = window.Telegram.WebApp;
+      
+      webApp.openLocation({
+        latitude: webApp.initDataUnsafe.user?.location?.latitude || 0,
+        longitude: webApp.initDataUnsafe.user?.location?.longitude || 0,
+      }, (location) => {
+        if (location) {
+          setDeliveryAddress({
+            latitude: location.latitude,
+            longitude: location.longitude,
+            formattedAddress: location.formatted_address,
+            landmark: location.landmark,
+            notes: location.notes
+          });
+        }
+      });
+    } else {
+      // Fallback cho trình duyệt thông thường
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            setDeliveryAddress({
+              latitude,
+              longitude,
+              formattedAddress: `Current Location (${latitude.toFixed(6)}, ${longitude.toFixed(6)})`
+            });
+          },
+          (error) => {
+            console.error('Error getting location:', error);
+            alert('Unable to get your current location. Please enable location services.');
+          }
+        );
+      }
+    }
+  };
 
   // Kiểm tra theme
   useEffect(() => {
@@ -151,7 +195,16 @@ const FoodOrderingApp = () => {
     return getTotalPrice() + getDeliveryFee();
   };
 
-  const handlePlaceOrder = async () => {
+  // Accept optional data from OrderForm (child). OrderForm calls onPlaceOrder({...})
+  const handlePlaceOrder = async (orderFromForm) => {
+    // Prefer delivery address from the form payload (orderFromForm.deliveryAddress)
+    const addressToUse = orderFromForm?.deliveryAddress || deliveryAddress;
+
+    if (!addressToUse) {
+      alert('Please select a delivery address');
+      return;
+    }
+
     try {
       setError('');
 
@@ -179,19 +232,39 @@ const FoodOrderingApp = () => {
       }
 
       // Chuẩn bị order payload
+      // Merge values: use values from form if provided, otherwise fall back to state
+      const instructions = orderFromForm?.specialInstructions ?? specialInstructions;
+      const voucher = orderFromForm?.voucherCode ?? voucherCode;
+      const paymentMethod = orderFromForm?.paymentMethod ?? selectedPaymentMethod;
+
+      // Chuẩn bị order payload với deliveryAddress đúng format
       const orderPayload = {
         items: cart.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
           variantName: item.selectedVariant?.name || null,
-          variantSku: item.selectedVariant?.sku || null
+          variantSku: item.selectedVariant?.sku || null,
+          price: product.selectedVariant ? product.selectedVariant.price : product.price,
+          name: item.name
         })),
-        specialInstructions,
-        voucherCode,
+        specialInstructions: instructions,
+        voucherCode: voucher,
         total: getFinalTotal(),
         paymentMethod: selectedPaymentMethod,
-        telegramInfo: telegramInfo // Include Telegram info
+        telegramInfo: telegramInfo,// Include Telegram info
+        subtotal: getTotalPrice(),
+        tax: getTax(),
+        deliveryFee: getDeliveryFee(),
+        paymentMethod,
+        deliveryAddress: addressToUse.formattedAddress || String(addressToUse), // CHỈ GỬI CHUỖI ĐỊA CHỈ
+        deliveryLocation: { // THÊM LOCATION COORDINATES (nếu có)
+          latitude: addressToUse.latitude,
+          longitude: addressToUse.longitude
+        },
+        status: 'pending'
       };
+
+      console.log('Placing order with address:', orderPayload.deliveryAddress); // Debug log
 
       // Gọi API tạo order
       const response = await orderAPI.createOrder(orderPayload);
@@ -199,20 +272,21 @@ const FoodOrderingApp = () => {
       if (response.success) {
         setCurrentOrder(response.data);
         
-        if (selectedPaymentMethod === 'crypto') {
+        if (paymentMethod === 'crypto') {
           setShowQRPayment(true);
-
           startPaymentPolling(response.data._id);
         } else {
           setOrderSuccess(true);
           setCart([]);
           setShowOrderForm(false);
           setSpecialInstructions('');
+          setVoucherCode('');
         }
       } else {
         setError(response.message || 'Failed to create order');
       }
     } catch (err) {
+      console.error('Order placement error:', err);
       setError(err.response?.data?.message || 'Failed to place order');
     }
   };
@@ -352,13 +426,16 @@ const FoodOrderingApp = () => {
           specialInstructions={specialInstructions}
           voucherCode={voucherCode}
           selectedPaymentMethod={selectedPaymentMethod}
-          tax={getTax()}
-          finalTotal={getFinalTotal()}
+          tax={2.50}
+          finalTotal={25.50}
+          deliveryAddress={deliveryAddress}
           onClose={() => setShowOrderForm(false)}
-          onVoucherCodeChange={setVoucherCode}
           onSpecialInstructionsChange={setSpecialInstructions}
+          onVoucherCodeChange={setVoucherCode}
           onPaymentMethodChange={setSelectedPaymentMethod}
           onPlaceOrder={handlePlaceOrder}
+          onUseCurrentLocation={handleUseCurrentLocation}
+          onAddressUpdate={handleAddressUpdate}
         />
       )}
 

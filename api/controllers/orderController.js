@@ -82,6 +82,7 @@ const createOrder = async (req, res) => {
         variantSku: variantSku,
         quantity: item.quantity,
         subtotal: itemSubtotal,
+        deliveryAddress: item.deliveryAddress || '',
         customizations: item.customizations || [],
         specialRequest: item.specialRequest || '',
         voucherCode: voucherCode || ''
