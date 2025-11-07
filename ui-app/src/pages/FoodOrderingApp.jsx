@@ -255,7 +255,6 @@ const FoodOrderingApp = () => {
         subtotal: getTotalPrice(),
         tax: getTax(),
         deliveryFee: getDeliveryFee(),
-        paymentMethod,
         deliveryAddress: addressToUse.formattedAddress || String(addressToUse), // CHỈ GỬI CHUỖI ĐỊA CHỈ
         deliveryLocation: { // THÊM LOCATION COORDINATES (nếu có)
           latitude: addressToUse.latitude,
