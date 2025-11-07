@@ -14,6 +14,14 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  variantName: {
+    type: String,
+    default: ''
+  },
+  variantSku: {
+    type: String,
+    default: ''
+  },
   quantity: {
     type: Number,
     required: true,

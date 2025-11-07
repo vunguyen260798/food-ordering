@@ -24,6 +24,21 @@ const orderSchema = new mongoose.Schema({
   specialInstructions: String,
   voucherCode: String,
   
+  // Thông tin Telegram
+  telegramInfo: {
+    userId: String,          // Telegram user ID
+    chatId: String,          // Chat ID (if available)
+    username: String,        // @username
+    firstName: String,       // User's first name
+    lastName: String,        // User's last name
+    languageCode: String,    // User's language preference (en, vi, etc.)
+    isPremium: Boolean,      // Telegram Premium status
+    photoUrl: String,        // Profile photo URL
+    platform: String,        // ios, android, web, etc.
+    queryId: String,         // Query ID for callbacks
+    authDate: Date          // When user authenticated
+  },
+  
   // Tính toán tiền
   subtotal: {
     type: Number,

@@ -15,7 +15,8 @@ const createOrder = async (req, res) => {
       deliveryAddress, 
       specialInstructions,
       voucherCode,
-      paymentMethod
+      paymentMethod,
+      telegramInfo
     } = req.body;
 
     if (!items || items.length === 0) {
@@ -39,12 +40,46 @@ const createOrder = async (req, res) => {
         });
       }
 
-      const itemSubtotal = product.price * item.quantity;
+      // Determine price based on variant or base product
+      let itemPrice = product.price;
+      let variantName = '';
+      let variantSku = '';
+
+      // If variant information is provided, find the variant and use its price
+      if (item.variantName || item.variantSku) {
+        const variant = product.variants.find(v => {
+          if (item.variantSku) {
+            return v.sku === item.variantSku;
+          }
+          return v.name === item.variantName;
+        });
+
+        if (variant) {
+          if (!variant.isAvailable) {
+            return res.status(400).json({
+              success: false,
+              message: `Variant "${variant.name}" is not available for product: ${product.name}`
+            });
+          }
+          itemPrice = variant.price;
+          variantName = variant.name;
+          variantSku = variant.sku;
+        } else {
+          return res.status(404).json({
+            success: false,
+            message: `Variant not found for product: ${product.name}`
+          });
+        }
+      }
+
+      const itemSubtotal = itemPrice * item.quantity;
 
       const orderItem = await OrderItem.create({
         product: product._id,
         productName: product.name,
-        productPrice: product.price,
+        productPrice: itemPrice,
+        variantName: variantName,
+        variantSku: variantSku,
         quantity: item.quantity,
         subtotal: itemSubtotal,
         customizations: item.customizations || [],
@@ -82,6 +117,23 @@ const createOrder = async (req, res) => {
       estimatedDeliveryTime,
       paymentMethod: paymentMethod || 'stripe'
     };
+
+    // Thêm Telegram info nếu có
+    if (telegramInfo) {
+      orderData.telegramInfo = {
+        userId: telegramInfo.userId,
+        chatId: telegramInfo.chatId,
+        username: telegramInfo.username,
+        firstName: telegramInfo.firstName,
+        lastName: telegramInfo.lastName,
+        languageCode: telegramInfo.languageCode,
+        isPremium: telegramInfo.isPremium,
+        photoUrl: telegramInfo.photoUrl,
+        platform: telegramInfo.platform,
+        queryId: telegramInfo.queryId,
+        authDate: telegramInfo.authDate ? new Date(telegramInfo.authDate) : null
+      };
+    }
 
     // Thêm crypto payment info nếu cần
     if (paymentMethod === 'crypto') {

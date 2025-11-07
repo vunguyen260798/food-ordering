@@ -30,7 +30,6 @@ const PartnerTable = ({ partners, onEdit, onDelete }) => {
             <th>Partner Code</th>
             <th>User Name</th>
             <th>Created</th>
-            <th>Updated</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -50,9 +49,6 @@ const PartnerTable = ({ partners, onEdit, onDelete }) => {
               <td>{partner.userName}</td>
               <td>
                 <small>{formatDate(partner.createdAt)}</small>
-              </td>
-              <td>
-                <small>{formatDate(partner.updatedAt)}</small>
               </td>
               <td>
                 <div style={{ display: 'flex', gap: '5px' }}>

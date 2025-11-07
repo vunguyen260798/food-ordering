@@ -150,6 +150,29 @@ const FoodOrderingApp = () => {
     try {
       setError('');
 
+      // Collect Telegram info if available
+      let telegramInfo = null;
+      if (window.Telegram?.WebApp) {
+        const tg = window.Telegram.WebApp;
+        const user = tg.initDataUnsafe?.user;
+        
+        if (user) {
+          telegramInfo = {
+            userId: user.id?.toString(),
+            chatId: user.id?.toString(),
+            username: user.username,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            languageCode: user.language_code,
+            isPremium: user.is_premium || false,
+            photoUrl: user.photo_url,
+            platform: tg.platform,
+            queryId: tg.initDataUnsafe?.query_id,
+            authDate: tg.initDataUnsafe?.auth_date ? tg.initDataUnsafe.auth_date * 1000 : Date.now()
+          };
+        }
+      }
+
       // Chuẩn bị order payload
       const orderPayload = {
         items: cart.map(item => ({
@@ -159,7 +182,8 @@ const FoodOrderingApp = () => {
         specialInstructions,
         voucherCode,
         total: getFinalTotal(),
-        paymentMethod: selectedPaymentMethod
+        paymentMethod: selectedPaymentMethod,
+        telegramInfo: telegramInfo // Include Telegram info
       };
 
       // Gọi API tạo order

@@ -70,9 +70,10 @@ export const orderAPI = {
       specialInstructions: orderData.specialInstructions,
       voucherCode: orderData.voucherCode,
       paymentMethod: orderData.paymentMethod,
-      customerName: 'Customer', 
-      customerPhone: '', 
-      deliveryAddress: '' 
+      customerName: orderData.customerName || 'Customer', 
+      customerPhone: orderData.customerPhone || '', 
+      deliveryAddress: orderData.deliveryAddress || '',
+      telegramInfo: orderData.telegramInfo // Include Telegram info
     });
     return response.data;
   },

@@ -19,7 +19,6 @@ class CryptoPaymentService {
       });
 
       if (pendingOrders.length === 0) {
-        console.log('No pending crypto orders found');
         return;
       }
 
