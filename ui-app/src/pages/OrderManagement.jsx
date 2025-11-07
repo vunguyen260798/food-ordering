@@ -121,9 +121,9 @@ const OrderManagement = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('vi-VN', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'VND'
+      currency: 'USD'
     }).format(amount);
   };
 
@@ -246,7 +246,7 @@ const OrderManagement = () => {
               {order.orderItems && order.orderItems.map((item, index) => (
                 <div key={index} className="order-item-detail">
                   <div className="item-main">
-                    <span className="item-name">{item.productName}</span>
+                    <span className="item-name">{item.productName} - {item.variantName}</span>
                     <span className="item-price">{formatCurrency(item.productPrice)}</span>
                   </div>
                   <div className="item-quantity">Số lượng: {item.quantity}</div>
@@ -269,10 +269,6 @@ const OrderManagement = () => {
               <div className="summary-row">
                 <span>Phí vận chuyển:</span>
                 <span>{formatCurrency(order.deliveryFee)}</span>
-              </div>
-              <div className="summary-row">
-                <span>Thuế:</span>
-                <span>{formatCurrency(order.tax)}</span>
               </div>
               <div className="summary-row total">
                 <span>Tổng cộng:</span>

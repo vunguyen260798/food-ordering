@@ -332,6 +332,77 @@ body {
   font-size: 32px;
 }
 
+/* Product Header with Variant Selector */
+.product-name {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--text-color);
+  margin-bottom: 8px;
+}
+
+/* Variant Buttons */
+.variant-buttons {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.variant-btn {
+  background: var(--secondary-bg);
+  color: var(--text-color);
+  border: 1.5px solid var(--border-color);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.variant-btn:hover {
+  border-color: var(--button-color);
+  background: color-mix(in srgb, var(--button-color) 10%, var(--secondary-bg));
+}
+
+.variant-btn.active {
+  background: var(--button-color);
+  color: var(--button-text);
+  border-color: var(--button-color);
+}
+
+.variant-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+.product-price {
+  color: var(--hint-color);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Dark mode adjustments for variant buttons */
+[data-theme="dark"] .variant-btn {
+  background: var(--secondary-bg);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .variant-btn:hover {
+  border-color: var(--button-color);
+}
+
+[data-theme="dark"] .variant-btn.active {
+  background: var(--button-color);
+  color: var(--button-text);
+}
+
 /* Item Image in Cart */
 .item-image {
   width: 40px;

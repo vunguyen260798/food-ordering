@@ -70,15 +70,11 @@ const OrderForm = ({
           <div className="order-summary-section">
             <div className="summary-row">
               <span>Subtotal</span>
-              <span>${(finalTotal - tax).toFixed(2)}</span>
+              <span>${(finalTotal).toFixed(2)}</span>
             </div>
             <div className="summary-row">
               <span>Free Delivery</span>
               <span>$0.00</span>
-            </div>
-            <div className="summary-row tax-row">
-              <span>Tax (8%)</span>
-              <span>${tax.toFixed(2)}</span>
             </div>
             <div className="summary-row total-row">
               <span>Total</span>

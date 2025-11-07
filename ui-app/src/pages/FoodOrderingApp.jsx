@@ -87,21 +87,26 @@ const FoodOrderingApp = () => {
   };
 
   const addToCart = (product) => {
+    // Create a unique ID based on product and variant
+    const variantId = product.selectedVariant?._id || '';
+    const uniqueId = `${product._id}-${variantId}`;
+    
     const cartItem = {
-      id: product._id,
+      id: uniqueId,
       productId: product._id,
-      name: product.name,
-      price: product.price,
+      name: product.selectedVariant ? `${product.name} (${product.selectedVariant.name})` : product.name,
+      price: product.selectedVariant ? product.selectedVariant.price : product.price,
       quantity: 1,
       image: product.image,
-      description: product.description
+      description: product.selectedVariant?.description || product.description,
+      selectedVariant: product.selectedVariant
     };
 
     setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === cartItem.id);
+      const existingItem = prevCart.find(item => item.id === uniqueId);
       if (existingItem) {
         return prevCart.map(item =>
-          item.id === cartItem.id
+          item.id === uniqueId
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
@@ -177,7 +182,9 @@ const FoodOrderingApp = () => {
       const orderPayload = {
         items: cart.map(item => ({
           productId: item.productId,
-          quantity: item.quantity
+          quantity: item.quantity,
+          variantName: item.selectedVariant?.name || null,
+          variantSku: item.selectedVariant?.sku || null
         })),
         specialInstructions,
         voucherCode,

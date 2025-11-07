@@ -1,10 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const ProductCard = ({ product, isInCart, quantity, onAddToCart }) => {
+  const [selectedVariant, setSelectedVariant] = useState(null);
+
+  // Set default variant (first variant or null if no variants)
+  useEffect(() => {
+    if (product.variants && product.variants.length > 0) {
+      setSelectedVariant(product.variants[0]);
+    }
+  }, [product]);
+
+  const handleVariantChange = (e, variant) => {
+    e.stopPropagation(); // Prevent triggering card click
+    setSelectedVariant(variant);
+  };
+
+  const handleAddToCart = () => {
+    const productToAdd = {
+      ...product,
+      selectedVariant: selectedVariant,
+      // Use variant price if available, otherwise use base price
+      price: selectedVariant ? selectedVariant.price : product.price
+    };
+    onAddToCart(productToAdd);
+  };
+
+  const displayPrice = selectedVariant ? selectedVariant.price : product.price;
+  const hasVariants = product.variants && product.variants.length > 0;
+
   return (
     <div 
       className={`product-card ${isInCart ? 'selected' : ''}`}
-      onClick={() => onAddToCart(product)}
+      onClick={handleAddToCart}
     >
       <div className="product-image">
         {product.image ? (
@@ -18,14 +45,29 @@ const ProductCard = ({ product, isInCart, quantity, onAddToCart }) => {
           />
         ) : null}
       </div>
-      <div className="product-name">{product.name}</div>
-      <div className="product-price">${product.price.toFixed(2)}</div>
       
-      {isInCart && (
-        <div className="product-quantity-badge">
-          {quantity}
+      <div className="product-name">{product.name}</div>
+
+      {hasVariants && (
+        <div className="variant-buttons">
+          {product.variants.map((variant) => (
+            <button
+              key={variant._id}
+              className={`variant-btn ${selectedVariant?._id === variant._id ? 'active' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedVariant(variant);
+              }}
+              title={variant.description}
+            >
+              {variant.name}
+            </button>
+          ))}
         </div>
       )}
+      
+      <div className="product-price">${displayPrice.toFixed(2)}</div>
+      
     </div>
   );
 };
