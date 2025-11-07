@@ -244,7 +244,7 @@ const FoodOrderingApp = () => {
           quantity: item.quantity,
           variantName: item.selectedVariant?.name || null,
           variantSku: item.selectedVariant?.sku || null,
-          price: product.selectedVariant ? product.selectedVariant.price : product.price,
+          price: item.selectedVariant ? item.selectedVariant.price : item.price,
           name: item.name
         })),
         specialInstructions: instructions,
@@ -425,8 +425,8 @@ const FoodOrderingApp = () => {
           specialInstructions={specialInstructions}
           voucherCode={voucherCode}
           selectedPaymentMethod={selectedPaymentMethod}
-          tax={2.50}
-          finalTotal={25.50}
+          tax={getTax()}
+          finalTotal={getFinalTotal()}
           deliveryAddress={deliveryAddress}
           onClose={() => setShowOrderForm(false)}
           onSpecialInstructionsChange={setSpecialInstructions}

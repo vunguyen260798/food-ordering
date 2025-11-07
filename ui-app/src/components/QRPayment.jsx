@@ -76,7 +76,7 @@ const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
             )}
           </div>
 
-          <div className="qr-code-container">
+          {/* <div className="qr-code-container">
             <div className="qr-code-placeholder">
               <div className="qr-code">
                 <div className="qr-pattern">
@@ -94,7 +94,7 @@ const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
               </div>
               <div className="scan-text">Scan QR Code to Pay</div>
             </div>
-          </div>
+          </div> */}
 
           <div className="payment-details">
             <div className="payment-amount">

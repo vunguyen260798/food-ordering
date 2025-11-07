@@ -499,13 +499,20 @@ body {
 .order-item-info {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.order-item-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .order-item-name {
   font-weight: 600;
   color: var(--text-color);
-  flex: 1;
 }
 
 .order-item-quantity {
@@ -521,6 +528,8 @@ body {
 .order-item-price {
   font-weight: 600;
   color: var(--text-color);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .order-item-description {

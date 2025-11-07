@@ -40,7 +40,7 @@ const OrderForm = ({
         initializeMap();
       }, 300);
     }
-  }, [deliveryAddress, showMap, mapInitialized]);
+  }, [deliveryAddress, showMap]);
 
   // Cập nhật address details khi deliveryAddress thay đổi
   useEffect(() => {
@@ -289,8 +289,14 @@ const OrderForm = ({
           // Lấy địa chỉ chi tiết cho vị trí mới
           const newAddress = await getDetailedAddress(position.lat, position.lng);
           
-          // Cập nhật delivery address
-          setDeliveryAddress(newAddress);
+          // Cập nhật delivery address WITHOUT triggering map reinitialization
+          setDeliveryAddress(prev => ({
+            ...newAddress,
+            // Preserve any state needed to prevent map reinit
+          }));
+          
+          // Update address details separately
+          setAddressDetails(newAddress.addressDetails);
           
           // Cập nhật popup với thông tin mới
           marker.bindPopup(`
@@ -333,8 +339,13 @@ const OrderForm = ({
           // Lấy địa chỉ chi tiết cho vị trí mới
           const newAddress = await getDetailedAddress(lat, lng);
           
-          // Cập nhật delivery address
-          setDeliveryAddress(newAddress);
+          // Cập nhật delivery address WITHOUT triggering map reinitialization
+          setDeliveryAddress(prev => ({
+            ...newAddress,
+          }));
+          
+          // Update address details separately
+          setAddressDetails(newAddress.addressDetails);
           
           // Cập nhật popup với thông tin mới
           markerRef.current.bindPopup(`
@@ -467,13 +478,13 @@ const OrderForm = ({
             <div className="section-header">
               <span className="section-title">Delivery Address</span>
               <div className="address-actions">
-                <button 
+                {/* <button 
                   className="current-location-btn"
                   onClick={handleRetryLocation}
                   disabled={isGettingLocation}
                 >
                   {isGettingLocation ? '🔄 Getting Location...' : '📍 Update Location'}
-                </button>
+                </button> */}
                 {deliveryAddress && (
                   <button 
                     className="toggle-map-btn"
@@ -511,7 +522,6 @@ const OrderForm = ({
                     <div 
                       ref={mapRef} 
                       className="delivery-map"
-                      key={`map-${deliveryAddress.latitude}-${deliveryAddress.longitude}`}
                     />
                     <div className="map-note">
                       📍 Drag the marker or click on map to change location
