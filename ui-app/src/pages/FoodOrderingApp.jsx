@@ -28,6 +28,33 @@ const FoodOrderingApp = () => {
   const [paymentPolling, setPaymentPolling] = useState(null);
   const [deliveryAddress, setDeliveryAddress] = useState(null);
 
+  // Initialize Telegram Web App
+  useEffect(() => {
+    if (window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+      
+      // Expand the app to full height
+      tg.expand();
+      
+      // Enable closing confirmation
+      tg.enableClosingConfirmation();
+      
+      // Log Telegram data for debugging
+      console.log('Telegram WebApp initialized:', {
+        isReady: tg.isReady,
+        platform: tg.platform,
+        version: tg.version,
+        initDataUnsafe: tg.initDataUnsafe,
+        user: tg.initDataUnsafe?.user
+      });
+      
+      // Notify that the app is ready
+      tg.ready();
+    } else {
+      console.warn('Telegram WebApp not available - running in browser mode');
+    }
+  }, []);
+
   const handleAddressUpdate = (address) => {
     setDeliveryAddress(address);
   };
@@ -214,21 +241,34 @@ const FoodOrderingApp = () => {
         const tg = window.Telegram.WebApp;
         const user = tg.initDataUnsafe?.user;
         
+        console.log('Telegram WebApp available:', {
+          exists: !!tg,
+          initDataUnsafe: tg.initDataUnsafe,
+          user: user,
+          initData: tg.initData
+        });
+        
         if (user) {
           telegramInfo = {
             userId: user.id?.toString(),
             chatId: user.id?.toString(),
-            username: user.username,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            languageCode: user.language_code,
+            username: user.username || '',
+            firstName: user.first_name || '',
+            lastName: user.last_name || '',
+            languageCode: user.language_code || '',
             isPremium: user.is_premium || false,
-            photoUrl: user.photo_url,
-            platform: tg.platform,
-            queryId: tg.initDataUnsafe?.query_id,
-            authDate: tg.initDataUnsafe?.auth_date ? tg.initDataUnsafe.auth_date * 1000 : Date.now()
+            photoUrl: user.photo_url || '',
+            platform: tg.platform || '',
+            queryId: tg.initDataUnsafe?.query_id || '',
+            authDate: tg.initDataUnsafe?.auth_date ? tg.initDataUnsafe.auth_date * 1000 : Date.now(),
+            initData: tg.initData // Raw init data for backend verification
           };
+          console.log('Telegram info collected:', telegramInfo);
+        } else {
+          console.warn('Telegram user data not available');
         }
+      } else {
+        console.warn('Telegram WebApp not available - order will be placed without Telegram info');
       }
 
       // Chuẩn bị order payload
