@@ -636,14 +636,9 @@ const OrderForm = ({
             onClick={handlePlaceOrder}
             disabled={cart.length === 0 || !deliveryAddress || isGettingLocation}
           >
-            {isGettingLocation ? 'GETTING LOCATION...' : 
-             selectedPaymentMethod === 'crypto' ? 'PAY WITH CRYPTO' : 'PAY WITH CARD'} ${finalTotal.toFixed(2)}
+             PAY WITH CRYPTO ${finalTotal.toFixed(2)}
           </button>
-          {!deliveryAddress && !isGettingLocation && (
-            <div className="address-warning">
-              ⚠️ Please allow location access to continue
-            </div>
-          )}
+    
         </div>
       </div>
     </div>

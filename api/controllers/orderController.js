@@ -6,6 +6,7 @@ const Product = require('../models/Product');
 // @route   POST /api/orders
 // @access  Public
 const createOrder = async (req, res) => {
+
   try {
     const { 
       items, 
@@ -18,7 +19,7 @@ const createOrder = async (req, res) => {
       paymentMethod,
       telegramInfo
     } = req.body;
-
+    console.log(telegramInfo)
     if (!items || items.length === 0) {
       return res.status(400).json({
         success: false,
