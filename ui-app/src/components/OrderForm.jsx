@@ -24,6 +24,8 @@ const OrderForm = ({
     district: '',
     city: ''
   });
+  const [manualAddressMode, setManualAddressMode] = useState(false);
+  const [manualAddress, setManualAddress] = useState('');
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
@@ -35,12 +37,12 @@ const OrderForm = ({
 
   // Khởi tạo map khi có deliveryAddress và showMap = true
   useEffect(() => {
-    if (deliveryAddress && showMap && !mapInitialized && mapRef.current) {
+    if (deliveryAddress && showMap && !mapInitialized && mapRef.current && !manualAddressMode) {
       setTimeout(() => {
         initializeMap();
       }, 300);
     }
-  }, [deliveryAddress, showMap]);
+  }, [deliveryAddress, showMap, manualAddressMode]);
 
   // Cập nhật address details khi deliveryAddress thay đổi
   useEffect(() => {
@@ -73,6 +75,8 @@ const OrderForm = ({
       console.log('Location obtained:', position);
     } catch (error) {
       console.error('Error getting location:', error);
+      // Switch to manual address mode if location detection fails
+      setManualAddressMode(true);
     } finally {
       setIsGettingLocation(false);
     }
@@ -389,10 +393,12 @@ const OrderForm = ({
     const newShowMap = !showMap;
     setShowMap(newShowMap);
     
-    if (newShowMap && deliveryAddress && mapInstanceRef.current) {
-      setTimeout(() => {
-        mapInstanceRef.current.invalidateSize();
-      }, 100);
+    if (!newShowMap) {
+      // When hiding map, cleanup and reset initialization flag
+      cleanupMap();
+    } else if (newShowMap && deliveryAddress) {
+      // When showing map, reset flag and let useEffect handle initialization
+      setMapInitialized(false);
     }
   };
 
@@ -442,6 +448,40 @@ const OrderForm = ({
   };
 
   const handlePlaceOrder = () => {
+    // Check if using manual address mode
+    if (manualAddressMode) {
+      if (!manualAddress.trim()) {
+        alert('Please enter your delivery address.');
+        return;
+      }
+      
+      const finalDeliveryAddress = {
+        latitude: null,
+        longitude: null,
+        formattedAddress: manualAddress,
+        source: 'manual_input',
+        addressDetails: {
+          streetNumber: '',
+          streetName: '',
+          ward: '',
+          district: '',
+          city: '',
+          fullAddress: manualAddress
+        }
+      };
+      
+      console.log('OrderForm: Sending manual delivery address to parent:', finalDeliveryAddress);
+      
+      onPlaceOrder({
+        deliveryAddress: finalDeliveryAddress,
+        specialInstructions,
+        voucherCode,
+        paymentMethod: selectedPaymentMethod
+      });
+      return;
+    }
+    
+    // Original location-based logic
     if (!deliveryAddress) {
       alert('Please wait while we get your location...');
       return;
@@ -464,6 +504,28 @@ const OrderForm = ({
     });
   };
 
+  const handleSwitchToManualAddress = () => {
+    setManualAddressMode(true);
+    setManualAddress(deliveryAddress ? deliveryAddress.formattedAddress : '');
+  };
+
+  const handleSwitchToAutoDetect = () => {
+    setManualAddressMode(false);
+    if (!deliveryAddress) {
+      getCurrentLocation();
+    } else {
+      // If address exists, show map and reinitialize it
+      setShowMap(true);
+      setMapInitialized(false);
+      // Trigger map initialization after a short delay
+      setTimeout(() => {
+        if (mapRef.current && !mapInitialized) {
+          initializeMap();
+        }
+      }, 300);
+    }
+  };
+
   return (
     <div className="order-form-overlay">
       <div className="order-form-modal">
@@ -478,25 +540,52 @@ const OrderForm = ({
             <div className="section-header">
               <span className="section-title">Delivery Address</span>
               <div className="address-actions">
-                {/* <button 
-                  className="current-location-btn"
-                  onClick={handleRetryLocation}
-                  disabled={isGettingLocation}
-                >
-                  {isGettingLocation ? '🔄 Getting Location...' : '📍 Update Location'}
-                </button> */}
-                {deliveryAddress && (
+                {!manualAddressMode && deliveryAddress && (
+                  <>
+                    <button 
+                      className="toggle-map-btn"
+                      onClick={toggleMap}
+                    >
+                      {showMap ? '🗺️ Hide Map' : '🗺️ Show Map'}
+                    </button>
+                    <button 
+                      className="manual-address-btn"
+                      onClick={handleSwitchToManualAddress}
+                    >
+                      ✏️ Enter Manually
+                    </button>
+                  </>
+                )}
+                {manualAddressMode && (
                   <button 
-                    className="toggle-map-btn"
-                    onClick={toggleMap}
+                    className="auto-detect-btn"
+                    onClick={handleSwitchToAutoDetect}
                   >
-                    {showMap ? '🗺️ Hide Map' : '🗺️ Show Map'}
+                    📍 Auto Detect
                   </button>
                 )}
               </div>
             </div>
             
-            {isGettingLocation ? (
+            {manualAddressMode ? (
+              <div className="manual-address-input-section">
+                <div className="manual-address-info">
+                  <p>📝 Please enter your full delivery address</p>
+                </div>
+                <textarea
+                  className="manual-address-textarea"
+                  placeholder="Enter your full delivery address (e.g., 123 Main Street, Ward 5, District 1, Ho Chi Minh City)"
+                  value={manualAddress}
+                  onChange={(e) => setManualAddress(e.target.value)}
+                  rows="4"
+                />
+                {manualAddress && (
+                  <div className="manual-address-preview">
+                    <strong>📍 Your Address:</strong> {manualAddress}
+                  </div>
+                )}
+              </div>
+            ) : isGettingLocation ? (
               <div className="location-loading">
                 <div className="loading-spinner"></div>
                 <p>Getting your current location...</p>
@@ -531,13 +620,21 @@ const OrderForm = ({
               </div>
             ) : (
               <div className="no-address-message">
-                <p>Unable to get your location. Please try again.</p>
-                <button 
-                  className="retry-btn"
-                  onClick={handleRetryLocation}
-                >
-                  🔄 Retry Location Detection
-                </button>
+                <p>Unable to get your location automatically.</p>
+                <div className="address-options">
+                  <button 
+                    className="retry-btn"
+                    onClick={handleRetryLocation}
+                  >
+                    🔄 Retry Location Detection
+                  </button>
+                  <button 
+                    className="manual-input-btn"
+                    onClick={() => setManualAddressMode(true)}
+                  >
+                    ✏️ Enter Address Manually
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -634,7 +731,7 @@ const OrderForm = ({
           <button 
             className="pay-button" 
             onClick={handlePlaceOrder}
-            disabled={cart.length === 0 || !deliveryAddress || isGettingLocation}
+            disabled={cart.length === 0 || (!deliveryAddress && !manualAddressMode) || (manualAddressMode && !manualAddress.trim())}
           >
              PAY WITH CRYPTO ${finalTotal.toFixed(2)}
           </button>
