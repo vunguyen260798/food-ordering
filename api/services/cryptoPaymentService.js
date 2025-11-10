@@ -25,17 +25,8 @@ class CryptoPaymentService {
       console.log(` Found ${pendingOrders.length} pending crypto orders`);
 
       // Lấy transactions từ TronGrid
-      // const response = await axios.get(
-      //   `${TRONGRID_API}/${MERCHANT_WALLET}/transactions/trc20`,
       const response = await axios.get(
-        'http://localhost:5000/api/test',
-        {
-          params: {
-            limit: 50, // Tăng limit để tìm nhiều transaction hơn
-            order_by: 'block_timestamp,desc'
-          },
-          timeout: 10000
-        }
+        `${TRONGRID_API}/${MERCHANT_WALLET}/transactions/trc20`
       );
 
       if (!response.data.success) {

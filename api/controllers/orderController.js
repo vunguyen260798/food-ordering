@@ -141,7 +141,7 @@ const createOrder = async (req, res) => {
     if (paymentMethod === 'crypto') {
       orderData.cryptoPayment = {
         expectedAmount: totalAmount,
-        walletAddress: 'TXXGsnvM3dtr5LZp13QKHnnfmqKsuYTVdk',
+        walletAddress: 'TQP479nwFZaoteJ7Hg6hTz4pCJbi6kVRiR',
         expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 phút
       };
     }

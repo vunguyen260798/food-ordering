@@ -84,7 +84,7 @@ const orderSchema = new mongoose.Schema({
     transactionHash: String,
     walletAddress: {
       type: String,
-      default: 'TXXGsnvM3dtr5LZp13QKHnnfmqKsuYTVdk'
+      default: 'TQP479nwFZaoteJ7Hg6hTz4pCJbi6kVRiR'
     },
     expiresAt: Date
   },
