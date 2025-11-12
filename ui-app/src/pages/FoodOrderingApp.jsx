@@ -435,6 +435,8 @@ const FoodOrderingApp = () => {
           isProductInCart={isProductInCart}
           getProductQuantity={getProductQuantity}
           onAddToCart={addToCart}
+          onRemoveFromCart={removeFromCart}
+          onUpdateQuantity={updateCartItem}
         />
       </main>
 
