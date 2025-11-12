@@ -136,7 +136,7 @@ class CryptoPaymentService {
       
       // Tạo payment transaction record
       const paymentTransaction = await PaymentTransaction.create({
-        transactionId: transaction.transaction_id,
+        transactionId: uuid.v4(),
         order: order._id,
         amount: receivedAmountUSDT,
         fromAddress: transaction.from,
