@@ -1,6 +1,6 @@
 require('dotenv').config();
 const axios = require('axios');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const Order = require('../models/Order');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const telegramService = require('./telegramService');
@@ -135,9 +135,12 @@ class CryptoPaymentService {
     try {
       // console.log(`✅ Confirming payment for order ${order._id}`);
       
+      // Generate UUID using crypto module (built-in Node.js)
+      const transactionId = crypto.randomUUID();
+      
       // Tạo payment transaction record
       const paymentTransaction = await PaymentTransaction.create({
-        transactionId: uuidv4(),
+        transactionId: transactionId,
         order: order._id,
         amount: receivedAmountUSDT,
         fromAddress: transaction.from,
