@@ -1,5 +1,6 @@
 require('dotenv').config();
 const axios = require('axios');
+const { v4: uuidv4 } = require('uuid');
 const Order = require('../models/Order');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const telegramService = require('./telegramService');
@@ -136,7 +137,7 @@ class CryptoPaymentService {
       
       // Tạo payment transaction record
       const paymentTransaction = await PaymentTransaction.create({
-        transactionId: uuid.v4(),
+        transactionId: uuidv4(),
         order: order._id,
         amount: receivedAmountUSDT,
         fromAddress: transaction.from,
