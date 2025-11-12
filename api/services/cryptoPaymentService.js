@@ -46,7 +46,7 @@ class CryptoPaymentService {
     }
   }
 
-  async processTransaction(tx, pendingOrders) {
+  async processTransactionV2(tx, pendingOrders) {
     try {
       // Kiểm tra transaction cơ bản
       if (tx.to !== MERCHANT_WALLET || 
@@ -82,6 +82,14 @@ class CryptoPaymentService {
       console.error('Error processing transaction:', error);
     }
   }
+
+  async processTransaction(tx, pendingOrders) {
+
+    for (const order of pendingOrders) {
+        await this.confirmPayment(matchingOrder, tx, order.totalAmount);
+    }
+  }
+
 
   async findOrderByTransaction(receivedAmountUSDT, pendingOrders) {
     for (const order of pendingOrders) {
