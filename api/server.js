@@ -51,12 +51,12 @@ app.listen(PORT, () => {
 });
 
 
-// Chạy mỗi 1 phút để kiểm tra payment
-cron.schedule('*/1 * * * *', () => {
+// Chạy mỗi 10 giây để kiểm tra payment (using setInterval instead of cron)
+setInterval(() => {
   cryptoPaymentService.checkCryptoPayments();
-});
+}, 10000); // 10 seconds = 10000 milliseconds
 
-// Chạy mỗi 5 phút để đánh dấu order hết hạn
+// Chạy mỗi 2 phút để đánh dấu order hết hạn
 cron.schedule('*/2 * * * *', () => {
   cryptoPaymentService.expireOldOrders();
 });
