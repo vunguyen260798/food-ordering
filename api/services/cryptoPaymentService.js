@@ -86,7 +86,7 @@ class CryptoPaymentService {
   async processTransaction(tx, pendingOrders) {
 
     for (const order of pendingOrders) {
-        await this.confirmPayment(matchingOrder, tx, order.totalAmount);
+        await this.confirmPayment(order, tx, order.totalAmount);
     }
   }
 
