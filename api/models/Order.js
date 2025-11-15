@@ -104,7 +104,6 @@ const orderSchema = new mongoose.Schema({
   }
 });
 
-// Trong orderSchema.pre('save')
 orderSchema.pre('save', async function(next) {
   if (this.isNew) {
     try {
@@ -116,7 +115,6 @@ orderSchema.pre('save', async function(next) {
       );
       
       const orderSequence = counter.sequence_value.toString().padStart(6, '0');
-      this.orderNumber = orderSequence;
       
       // Tạo cryptoValue nếu là thanh toán crypto
       if (this.paymentMethod === 'crypto') {
@@ -124,12 +122,22 @@ orderSchema.pre('save', async function(next) {
         const formattedAmount = this.totalAmount.toFixed(2);
         
         // cryptoValue = order_amount + 0.order_code
-        this.cryptoValue = (parseFloat(formattedAmount) + parseInt(orderSequence) / 1000000).toFixed(6);
+        const orderSequenceNumber = parseInt(orderSequence);
+        this.cryptoValue = (parseFloat(formattedAmount) + orderSequenceNumber / 1000000).toFixed(6);
+        
+        // Lấy 6 chữ số cuối của cryptoValue làm orderNumber
+        // Ví dụ: "9.990062" -> "990062"
+        const cryptoValueStr = this.cryptoValue.toString();
+        const decimalPart = cryptoValueStr.split('.')[1] || '';
+        this.orderNumber = decimalPart.padEnd(6, '0').substring(0, 6);
         
         // Thiết lập thời gian hết hạn (10 phút)
         this.cryptoPayment = this.cryptoPayment || {};
         this.cryptoPayment.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
         this.cryptoPayment.expectedAmount = parseFloat(this.cryptoValue);
+      } else {
+        // Nếu không phải crypto, vẫn dùng orderSequence thông thường
+        this.orderNumber = orderSequence;
       }
     } catch (error) {
       return next(error);

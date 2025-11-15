@@ -68,9 +68,8 @@ class CryptoPaymentService {
 
       // Lấy giá trị từ API và chuyển đổi sang USDT
       const txValue = parseInt(tx.value);
-      const receivedAmountUSDT = txValue / 1000000; // USDT có 6 decimals
+      const receivedAmountUSDT = txValue / 1000000; 
       
-      // console.log(`🔍 Processing transaction ${tx.transaction_id} with amount: ${receivedAmountUSDT} USDT`);
 
       // Tìm order khớp với transaction
       const matchingOrder = await this.findOrderByTransaction(receivedAmountUSDT, pendingOrders);
@@ -94,11 +93,9 @@ class CryptoPaymentService {
 
   async findOrderByTransaction(receivedAmountUSDT, pendingOrders) {
     for (const order of pendingOrders) {
-      // Tính toán order code từ số tiền nhận được
       const extractedOrderCode = this.calculateOrderCode(receivedAmountUSDT, order.totalAmount);
       
       if (extractedOrderCode && extractedOrderCode === order.orderNumber) {
-        // console.log(`✅ Found matching order: ${order._id}, Order code: ${order.orderNumber}`);
         return order;
       }
     }
@@ -108,18 +105,12 @@ class CryptoPaymentService {
 
   calculateOrderCode(receivedAmountUSDT, orderAmount) {
     try {
-      // Công thức: (received_amount - order_amount) = 0.order_code
       const difference = receivedAmountUSDT - orderAmount;
       
-      // console.log(`   📊 Amount diff: ${receivedAmountUSDT} - ${orderAmount} = ${difference}`);
-      
-      // Nếu difference là số dương rất nhỏ (0.000001 đến 0.999999)
       if (difference > 0 && difference < 1) {
-        // Chuyển phần thập phân thành 6 chữ số
         const decimalPart = difference.toFixed(6).split('.')[1];
         const orderCode = decimalPart.padStart(6, '0');
         
-        // console.log(`   🔍 Extracted order code: ${orderCode}`);
         return orderCode;
       }
       
@@ -133,12 +124,9 @@ class CryptoPaymentService {
 
   async confirmPayment(order, transaction, receivedAmountUSDT) {
     try {
-      // console.log(`✅ Confirming payment for order ${order._id}`);
       
-      // Generate UUID using crypto module (built-in Node.js)
       const transactionId = crypto.randomUUID();
       
-      // Tạo payment transaction record
       const paymentTransaction = await PaymentTransaction.create({
         transactionId: transactionId,
         order: order._id,
@@ -152,8 +140,7 @@ class CryptoPaymentService {
         status: 'confirmed'
       });
 
-      // Cập nhật order
-      order.status = 'paid';
+      order.status = 'pending';
       order.paymentTransaction = paymentTransaction._id;
       order.cryptoPayment.receivedAmount = receivedAmountUSDT;
       order.cryptoPayment.transactionHash = transaction.transaction_id;
@@ -162,8 +149,6 @@ class CryptoPaymentService {
 
       // Gửi notification đến Telegram
       await telegramService.sendNotification(order, transaction, paymentTransaction);
-      
-      // console.log(`✅ Order ${order._id} marked as paid, transaction saved: ${paymentTransaction._id}`);
       
     } catch (error) {
       console.error('Error confirming payment:', error);

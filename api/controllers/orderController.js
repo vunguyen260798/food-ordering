@@ -41,12 +41,10 @@ const createOrder = async (req, res) => {
         });
       }
 
-      // Determine price based on variant or base product
       let itemPrice = product.price;
       let variantName = '';
       let variantSku = '';
 
-      // If variant information is provided, find the variant and use its price
       if (item.variantName || item.variantSku) {
         const variant = product.variants.find(v => {
           if (item.variantSku) {
@@ -93,10 +91,8 @@ const createOrder = async (req, res) => {
       subtotal += itemSubtotal;
     }
 
-    // Calculate totals
     const tax = subtotal * 0.08;
     const deliveryFee = 0;
-    // const totalAmount = subtotal + tax + deliveryFee;
     const totalAmount = subtotal + deliveryFee;
 
     // Calculate estimated delivery time
@@ -141,7 +137,7 @@ const createOrder = async (req, res) => {
     if (paymentMethod === 'crypto') {
       orderData.cryptoPayment = {
         expectedAmount: totalAmount,
-        walletAddress: 'TQP479nwFZaoteJ7Hg6hTz4pCJbi6kVRiR',
+        walletAddress: process.env.MERCHANT_WALLET,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 phút
       };
     }
