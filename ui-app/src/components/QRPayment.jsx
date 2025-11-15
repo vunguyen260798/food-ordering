@@ -1,28 +1,150 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
-const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
+const QRPayment = ({ order, finalTotal, onClose, isPolling, customerInfo, deliveryAddress: orderDeliveryAddress }) => {
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
   const [isExpired, setIsExpired] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState(null);
+  const [showMap, setShowMap] = useState(true);
+  const [mapInitialized, setMapInitialized] = useState(false);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
 
   useEffect(() => {
-    if (!order?.cryptoPayment?.expiresAt) return;
+    if (timeLeft <= 0) {
+      setIsExpired(true);
+      handleTimeExpired();
+      return;
+    }
 
-    const expiryTime = new Date(order.cryptoPayment.expiresAt).getTime();
-    
-    const updateTimer = () => {
-      const now = Date.now();
-      const remaining = Math.max(0, Math.floor((expiryTime - now) / 1000));
-      
-      setTimeLeft(remaining);
-      setIsExpired(remaining === 0);
+    const timer = setInterval(() => {
+      setTimeLeft(prevTime => prevTime - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  const handleTimeExpired = () => {
+    setTimeout(() => {
+      onClose();
+    }, 2000);
+  };
+
+  useEffect(() => {
+    if (orderDeliveryAddress) {
+      console.log('Using delivery address from order:', orderDeliveryAddress);
+      setDeliveryAddress(orderDeliveryAddress);
+    } else {
+      console.log('No delivery address object, using customer info');
+      if (customerInfo && customerInfo.deliveryAddress) {
+        const fallbackAddress = {
+          latitude: 10.762622, 
+          longitude: 106.660172,
+          formattedAddress: customerInfo.deliveryAddress,
+          source: 'customer_info'
+        };
+        setDeliveryAddress(fallbackAddress);
+      }
+    }
+  }, [orderDeliveryAddress, customerInfo]);
+
+  // Khởi tạo map khi có deliveryAddress và showMap = true
+  useEffect(() => {
+    if (deliveryAddress && showMap && !mapInitialized && mapRef.current) {
+      setTimeout(() => {
+        initializeMap();
+      }, 300);
+    }
+  }, [deliveryAddress, showMap, mapInitialized]);
+
+  // Cleanup map khi component unmount
+  useEffect(() => {
+    return () => {
+      cleanupMap();
     };
+  }, []);
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+  const cleanupMap = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+      markerRef.current = null;
+      setMapInitialized(false);
+    }
+  };
 
-    return () => clearInterval(interval);
-  }, [order]);
+  const initializeMap = () => {
+    if (!deliveryAddress || !mapRef.current || !window.L) {
+      console.log('Map initialization skipped - missing requirements');
+      return;
+    }
+
+    try {
+      const { latitude, longitude } = deliveryAddress;
+      console.log('Initializing map at:', latitude, longitude);
+
+      // Cleanup map cũ nếu có
+      if (mapInstanceRef.current) {
+        cleanupMap();
+      }
+
+      // Khởi tạo map mới
+      mapInstanceRef.current = window.L.map(mapRef.current, {
+        zoomControl: false,
+        dragging: true
+      }).setView([latitude, longitude], 16);
+
+      // Thêm zoom control
+      window.L.control.zoom({
+        position: 'topright'
+      }).addTo(mapInstanceRef.current);
+      
+      // Thêm tile layer
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+        minZoom: 10
+      }).addTo(mapInstanceRef.current);
+
+      // Tạo marker - KHÔNG cho phép kéo thả vì đây là địa chỉ đã xác định
+      markerRef.current = window.L.marker([latitude, longitude], {
+        draggable: false
+      })
+        .addTo(mapInstanceRef.current)
+        .bindPopup(`
+          <div style="text-align: center;">
+            <strong>📍 Delivery Location</strong><br>
+            ${deliveryAddress.formattedAddress}
+          </div>`)
+        .openPopup();
+
+      // Force map resize
+      setTimeout(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      }, 100);
+
+      setMapInitialized(true);
+      console.log('Map initialized with delivery address from order');
+
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      setMapInitialized(false);
+    }
+  };
+
+  const toggleMap = () => {
+    const newShowMap = !showMap;
+    setShowMap(newShowMap);
+    
+    if (!newShowMap) {
+      cleanupMap();
+    } else if (newShowMap && deliveryAddress) {
+      setMapInitialized(false);
+    }
+  };
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -30,22 +152,27 @@ const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+  // Tạo QR code URL
+  const generateQRCodeUrl = () => {
+    const walletAddress = "TQP479nwFZacteJ7Hg6hTz4pCJbi6kVRiR";
+    const amount = order?.cryptoValue || finalTotal;
+    
+    const qrContent = `tron:${walletAddress}?amount=${amount}`;
+    
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrContent)}`;
   };
 
   const handleCloseClick = () => {
     setShowConfirmClose(true);
   };
 
+  const handleCancelClose = () => {
+    setShowConfirmClose(false);
+  };
+
   const handleConfirmClose = () => {
     setShowConfirmClose(false);
     onClose();
-  };
-
-  const handleCancelClose = () => {
-    setShowConfirmClose(false);
   };
 
   if (!order) return null;
@@ -64,72 +191,70 @@ const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
             <div className={`timer ${isExpired ? 'expired' : 'active'}`}>
               Time remaining: {formatTime(timeLeft)}
             </div>
-            {isPolling && (
-              <div className="polling-status">
-                🔍 Automatically checking payment status...
-              </div>
-            )}
-            {isExpired && (
-              <div className="expired-message">
-                Payment session expired. Please create a new order.
-              </div>
-            )}
           </div>
-
-          {/* <div className="qr-code-container">
-            <div className="qr-code-placeholder">
-              <div className="qr-code">
-                <div className="qr-pattern">
-                  <div className="qr-corner top-left"></div>
-                  <div className="qr-corner top-right"></div>
-                  <div className="qr-corner bottom-left"></div>
-                  <div className="qr-dots">
-                    {[...Array(25)].map((_, i) => (
-                      <div key={i} className="qr-dot" style={{
-                        animationDelay: `${i * 0.1}s`
-                      }}></div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="scan-text">Scan QR Code to Pay</div>
-            </div>
-          </div> */}
-
-          <div className="payment-details">
-            <div className="payment-amount">
-              <div className="amount-label">Amount to Pay</div>
-              <div className="amount-value">{order.cryptoValue} USDT</div>
-              <div className="amount-note">
-                * Send <strong>exactly</strong> this amount for automatic confirmation
-              </div>
+          
+          {/* Delivery Location Map */}
+          <div className="delivery-location-section">
+            <div className="section-header">
+              <h4>Delivery Location</h4>
+              <button 
+                className="toggle-map-btn"
+                onClick={toggleMap}
+              >
+                {showMap ? '🗺️ Hide Map' : '🗺️ Show Map'}
+              </button>
             </div>
             
-            <div className="crypto-address">
-              <div className="address-label">Merchant Wallet Address (TRC20)</div>
-              <div className="address-value">
-                {order.cryptoPayment.walletAddress}
-                <button 
-                  className="copy-button"
-                  onClick={() => copyToClipboard(order.cryptoPayment.walletAddress)}
-                >
-                  Copy
-                </button>
+            {deliveryAddress ? (
+              <div className="address-display">
+                <div className="address-text">
+                  <strong>Delivery Address:</strong> {deliveryAddress.formattedAddress}
+                </div>
+                
+                {showMap && (
+                  <div className="map-container">
+                    <div 
+                      ref={mapRef} 
+                      className="delivery-map"
+                      style={{ height: '200px', width: '100%', marginTop: '10px' }}
+                    />
+                    <div className="map-note">
+                      📍 This is your selected delivery location
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="no-address-message">
+                <p>Loading delivery location...</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="payment-container">
+            {/* QR Code */}
+            <div className="qr-code-container">
+              <div className="qr-code-placeholder">
+                <div className="real-qr-code">
+                  <img 
+                    src={generateQRCodeUrl()} 
+                    alt="QR Code for USDT Payment"
+                    className="qr-code-image"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="payment-instructions">
-              <h4>Payment Instructions:</h4>
-              <ol>
-                <li>Send <strong>exactly {order.cryptoValue} USDT</strong> to the address above</li>
-                <li>Make sure to use <strong>TRC20 network</strong></li>
-                <li>Wait for transaction confirmation (usually 2-3 minutes)</li>
-                <li>Order will be confirmed automatically once payment is detected</li>
-                <li><strong>Important:</strong> The decimal part ({order.cryptoValue.split('.')[1]}) is your order identifier</li>
-              </ol>
+            {/* Payment Details */}
+            <div className="payment-details">
+              <div className="payment-amount">
+                <div className="amount-label">Amount to Pay</div>
+                <div className="amount-value">{order.cryptoValue} USDT</div>
+              </div>
             </div>
           </div>
 
+          {/* Order Summary */}
           <div className="order-summary">
             <h4>Order Summary:</h4>
             <div className="order-number">Order #: {order.orderNumber}</div>
@@ -139,10 +264,6 @@ const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
               </div>
             ))}
             <div className="order-total">Total: ${finalTotal}</div>
-          </div>
-
-          <div className="auto-check-notice">
-            <p><strong>Automatic Confirmation:</strong> The system will automatically detect your payment and confirm the order using the unique amount {order.cryptoValue}.</p>
           </div>
         </div>
 
@@ -166,7 +287,7 @@ const QRPayment = ({ order, finalTotal, onClose, isPolling }) => {
             <div className="confirmation-body">
               <p>Are you sure you want to cancel this payment?</p>
               <p className="warning-text">
-                <strong>Warning:</strong> If you cancel, this order will not be processed and you'll need to create a new order to complete your purchase.
+                <strong>Warning:</strong> If you cancel, this order will not be processed.
               </p>
             </div>
             <div className="confirmation-footer">

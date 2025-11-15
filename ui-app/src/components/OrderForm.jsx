@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const OrderForm = ({
   cart,
   specialInstructions,
   voucherCode,
   selectedPaymentMethod,
-  tax,
   finalTotal,
   onClose,
   onSpecialInstructionsChange,
@@ -13,6 +12,11 @@ const OrderForm = ({
   onPaymentMethodChange,
   onPlaceOrder
 }) => {
+  const [customerInfo, setCustomerInfo] = useState({
+    customerName: '',
+    customerPhone: '',
+    deliveryAddress: ''
+  });
   const [deliveryAddress, setDeliveryAddress] = useState(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [showMap, setShowMap] = useState(true);
@@ -26,9 +30,11 @@ const OrderForm = ({
   });
   const [manualAddressMode, setManualAddressMode] = useState(false);
   const [manualAddress, setManualAddress] = useState('');
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
+  const addressInputTimeoutRef = useRef(null);
 
   // Tự động lấy địa chỉ khi component mount
   useEffect(() => {
@@ -42,12 +48,17 @@ const OrderForm = ({
         initializeMap();
       }, 300);
     }
-  }, [deliveryAddress, showMap, manualAddressMode]);
+  }, [deliveryAddress, showMap, manualAddressMode, mapInitialized]);
 
-  // Cập nhật address details khi deliveryAddress thay đổi
+  // Cập nhật address details và delivery address trong customerInfo khi deliveryAddress thay đổi
   useEffect(() => {
     if (deliveryAddress && deliveryAddress.addressDetails) {
       setAddressDetails(deliveryAddress.addressDetails);
+      // Cập nhật địa chỉ giao hàng trong customerInfo
+      setCustomerInfo(prev => ({
+        ...prev,
+        deliveryAddress: deliveryAddress.formattedAddress
+      }));
     }
   }, [deliveryAddress]);
 
@@ -55,6 +66,9 @@ const OrderForm = ({
   useEffect(() => {
     return () => {
       cleanupMap();
+      if (addressInputTimeoutRef.current) {
+        clearTimeout(addressInputTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -64,6 +78,126 @@ const OrderForm = ({
       mapInstanceRef.current = null;
       markerRef.current = null;
       setMapInitialized(false);
+    }
+  };
+
+  // Hàm geocoding: chuyển đổi địa chỉ text thành tọa độ
+  const geocodeAddress = async (address) => {
+    if (!address.trim()) return null;
+    
+    setIsGeocoding(true);
+    try {
+      console.log('Geocoding address:', address);
+      
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&addressdetails=1&limit=1&accept-language=vi`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Geocoding API failed');
+      }
+      
+      const data = await response.json();
+      console.log('Geocoding result:', data);
+      
+      if (data && data.length > 0) {
+        const result = data[0];
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        
+        // Trích xuất thông tin địa chỉ chi tiết
+        const addressDetails = {
+          streetNumber: result.address.house_number || result.address.house_name || '',
+          streetName: result.address.road || result.address.street || result.address.pedestrian || '',
+          ward: result.address.suburb || result.address.village || result.address.neighbourhood || '',
+          district: result.address.city_district || result.address.district || '',
+          city: result.address.city || result.address.town || result.address.county || '',
+          state: result.address.state || '',
+          country: result.address.country || '',
+          postcode: result.address.postcode || ''
+        };
+
+        // Tạo formatted address từ kết quả geocoding
+        const formattedAddress = result.display_name || address;
+
+        return {
+          latitude: lat,
+          longitude: lng,
+          formattedAddress,
+          source: 'address_geocoding',
+          addressDetails,
+          rawAddress: result
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      return null;
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  // Hàm xử lý thay đổi địa chỉ với debounce
+  const handleDeliveryAddressChange = (value) => {
+    // Cập nhật giá trị input ngay lập tức
+    setCustomerInfo(prev => ({
+      ...prev,
+      deliveryAddress: value
+    }));
+
+    // Clear timeout cũ nếu có
+    if (addressInputTimeoutRef.current) {
+      clearTimeout(addressInputTimeoutRef.current);
+    }
+
+    // Chỉ thực hiện geocoding sau khi người dùng ngừng nhập 1.5 giây
+    addressInputTimeoutRef.current = setTimeout(async () => {
+      if (value.trim()) {
+        console.log('Processing address input:', value);
+        const geocodedAddress = await geocodeAddress(value);
+        
+        if (geocodedAddress) {
+          console.log('Address geocoded successfully:', geocodedAddress);
+          setDeliveryAddress(geocodedAddress);
+          
+          // Nếu map đã được khởi tạo, cập nhật vị trí marker
+          if (mapInstanceRef.current && markerRef.current) {
+            updateMapLocation(geocodedAddress.latitude, geocodedAddress.longitude);
+          } else if (showMap) {
+            // Nếu map chưa được khởi tạo nhưng đang hiển thị, reset flag để khởi tạo lại
+            setMapInitialized(false);
+          }
+        } else {
+          console.log('Geocoding failed for address:', value);
+        }
+      }
+    }, 1500); // Debounce 1.5 giây
+  };
+
+  // Hàm cập nhật vị trí map khi địa chỉ thay đổi
+  const updateMapLocation = (lat, lng) => {
+    if (!mapInstanceRef.current || !markerRef.current) return;
+
+    try {
+      // Di chuyển map đến vị trí mới
+      mapInstanceRef.current.setView([lat, lng], 16);
+      
+      // Di chuyển marker đến vị trí mới
+      markerRef.current.setLatLng([lat, lng]);
+      
+      // Cập nhật popup
+      markerRef.current.bindPopup(`
+        <div style="text-align: center;">
+          <strong>📍 Delivery Location</strong><br>
+          ${customerInfo.deliveryAddress}
+        </div>
+      `).openPopup();
+
+      console.log('Map location updated to:', lat, lng);
+    } catch (error) {
+      console.error('Error updating map location:', error);
     }
   };
 
@@ -293,23 +427,15 @@ const OrderForm = ({
           // Lấy địa chỉ chi tiết cho vị trí mới
           const newAddress = await getDetailedAddress(position.lat, position.lng);
           
-          // Cập nhật delivery address WITHOUT triggering map reinitialization
-          setDeliveryAddress(prev => ({
-            ...newAddress,
-            // Preserve any state needed to prevent map reinit
+          // Cập nhật delivery address
+          setDeliveryAddress(newAddress);
+          
+          // Cập nhật address input
+          setCustomerInfo(prev => ({
+            ...prev,
+            deliveryAddress: newAddress.formattedAddress
           }));
           
-          // Update address details separately
-          setAddressDetails(newAddress.addressDetails);
-          
-          // Cập nhật popup với thông tin mới
-          marker.bindPopup(`
-            <div style="text-align: center;">
-              <strong>📍 Delivery Location</strong><br>
-              ${newAddress.formattedAddress}
-            </div>
-          `).openPopup();
-
           console.log('Address updated after drag:', newAddress);
 
         } catch (error) {
@@ -343,22 +469,15 @@ const OrderForm = ({
           // Lấy địa chỉ chi tiết cho vị trí mới
           const newAddress = await getDetailedAddress(lat, lng);
           
-          // Cập nhật delivery address WITHOUT triggering map reinitialization
-          setDeliveryAddress(prev => ({
-            ...newAddress,
+          // Cập nhật delivery address
+          setDeliveryAddress(newAddress);
+          
+          // Cập nhật address input
+          setCustomerInfo(prev => ({
+            ...prev,
+            deliveryAddress: newAddress.formattedAddress
           }));
           
-          // Update address details separately
-          setAddressDetails(newAddress.addressDetails);
-          
-          // Cập nhật popup với thông tin mới
-          markerRef.current.bindPopup(`
-            <div style="text-align: center;">
-              <strong>📍 Delivery Location</strong><br>
-              ${newAddress.formattedAddress}
-            </div>
-          `).openPopup();
-
           console.log('Address updated after click:', newAddress);
 
         } catch (error) {
@@ -420,265 +539,96 @@ const OrderForm = ({
     }));
   };
 
-  const handleSaveAddressDetails = () => {
-    if (deliveryAddress) {
-      const updatedAddress = {
-        ...deliveryAddress,
-        addressDetails: addressDetails,
-        formattedAddress: formatAddressFromDetails(addressDetails)
-      };
-      setDeliveryAddress(updatedAddress);
-      alert('Address details updated successfully!');
+  // Thêm hàm xử lý thay đổi thông tin khách hàng
+  const handleCustomerInfoChange = (field, value) => {
+    if (field === 'deliveryAddress') {
+      handleDeliveryAddressChange(value);
+    } else {
+      setCustomerInfo(prev => ({
+        ...prev,
+        [field]: value
+      }));
     }
-  };
-
-  const formatAddressFromDetails = (details) => {
-    const parts = [];
-    if (details.streetNumber && details.streetName) {
-      parts.push(`${details.streetNumber} ${details.streetName}`);
-    } else if (details.streetName) {
-      parts.push(details.streetName);
-    }
-    if (details.ward) parts.push(details.ward);
-    if (details.district) parts.push(details.district);
-    if (details.city) parts.push(details.city);
-    if (details.country) parts.push(details.country);
-    
-    return parts.join(', ') || 'Custom Address';
   };
 
   const handlePlaceOrder = () => {
-    // Check if using manual address mode
-    if (manualAddressMode) {
-      if (!manualAddress.trim()) {
-        alert('Please enter your delivery address.');
-        return;
-      }
-      
-      const finalDeliveryAddress = {
-        latitude: null,
-        longitude: null,
-        formattedAddress: manualAddress,
-        source: 'manual_input',
-        addressDetails: {
-          streetNumber: '',
-          streetName: '',
-          ward: '',
-          district: '',
-          city: '',
-          fullAddress: manualAddress
-        }
-      };
-      
-      console.log('OrderForm: Sending manual delivery address to parent:', finalDeliveryAddress);
-      
-      onPlaceOrder({
-        deliveryAddress: finalDeliveryAddress,
-        specialInstructions,
-        voucherCode,
-        paymentMethod: selectedPaymentMethod
-      });
+    // Validate required fields
+    if (!customerInfo.customerName.trim()) {
+      alert('Please enter your name');
       return;
     }
-    
-    // Original location-based logic
-    if (!deliveryAddress) {
-      alert('Please wait while we get your location...');
+    if (!customerInfo.customerPhone.trim()) {
+      alert('Please enter your phone number');
       return;
     }
-    
-    // Kết hợp address details đã chỉnh sửa
-    const finalDeliveryAddress = {
-      ...deliveryAddress,
-      addressDetails: addressDetails,
-      formattedAddress: formatAddressFromDetails(addressDetails)
-    };
-    
-    console.log('OrderForm: Sending delivery address to parent:', finalDeliveryAddress);
-    
+    if (!customerInfo.deliveryAddress.trim()) {
+      alert('Please enter your address');
+      return;
+    }
+
     onPlaceOrder({
-      deliveryAddress: finalDeliveryAddress,
+      customerInfo,
       specialInstructions,
       voucherCode,
-      paymentMethod: selectedPaymentMethod
+      paymentMethod: selectedPaymentMethod,
+      deliveryAddress: deliveryAddress
     });
-  };
-
-  const handleSwitchToManualAddress = () => {
-    setManualAddressMode(true);
-    setManualAddress(deliveryAddress ? deliveryAddress.formattedAddress : '');
-  };
-
-  const handleSwitchToAutoDetect = () => {
-    setManualAddressMode(false);
-    if (!deliveryAddress) {
-      getCurrentLocation();
-    } else {
-      // If address exists, show map and reinitialize it
-      setShowMap(true);
-      setMapInitialized(false);
-      // Trigger map initialization after a short delay
-      setTimeout(() => {
-        if (mapRef.current && !mapInitialized) {
-          initializeMap();
-        }
-      }, 300);
-    }
   };
 
   return (
     <div className="order-form-overlay">
       <div className="order-form-modal">
         <div className="order-form-header">
-          <h2>YOUR ORDER</h2>
+          <h2>Checkout</h2> 
           <button className="close-btn" onClick={onClose}>✕</button>
         </div>
         
         <div className="order-form-content">
-          {/* Delivery Address */}
-          <div className="delivery-address-section">
-            <div className="section-header">
-              <span className="section-title">Delivery Address</span>
-              <div className="address-actions">
-                {!manualAddressMode && deliveryAddress && (
-                  <>
-                    <button 
-                      className="toggle-map-btn"
-                      onClick={toggleMap}
-                    >
-                      {showMap ? '🗺️ Hide Map' : '🗺️ Show Map'}
-                    </button>
-                    <button 
-                      className="manual-address-btn"
-                      onClick={handleSwitchToManualAddress}
-                    >
-                      ✏️ Enter Manually
-                    </button>
-                  </>
-                )}
-                {manualAddressMode && (
-                  <button 
-                    className="auto-detect-btn"
-                    onClick={handleSwitchToAutoDetect}
-                  >
-                    📍 Auto Detect
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            {manualAddressMode ? (
-              <div className="manual-address-input-section">
-                <div className="manual-address-info">
-                  <p>📝 Please enter your full delivery address</p>
-                </div>
-                <textarea
-                  className="manual-address-textarea"
-                  placeholder="Enter your full delivery address (e.g., 123 Main Street, Ward 5, District 1, Ho Chi Minh City)"
-                  value={manualAddress}
-                  onChange={(e) => setManualAddress(e.target.value)}
-                  rows="4"
-                />
-                {manualAddress && (
-                  <div className="manual-address-preview">
-                    <strong>📍 Your Address:</strong> {manualAddress}
-                  </div>
-                )}
-              </div>
-            ) : isGettingLocation ? (
-              <div className="location-loading">
-                <div className="loading-spinner"></div>
-                <p>Getting your current location...</p>
-                <p className="location-hint">Please allow location access in your browser</p>
-              </div>
-            ) : deliveryAddress ? (
-              <div className="address-display">
-                <div className="address-main-info">
-                  <div className="address-icon">📍</div>
-                  <div className="address-text-content">
-                    <div className="address-text">
-                      {deliveryAddress.formattedAddress}
-                    </div>
-                    <div className="address-source">
-                      Detected via {deliveryAddress.source}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Interactive Map */}
-                {showMap && (
-                  <div className="map-container">
-                    <div 
-                      ref={mapRef} 
-                      className="delivery-map"
-                    />
-                    <div className="map-note">
-                      📍 Drag the marker or click on map to change location
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="no-address-message">
-                <p>Unable to get your location automatically.</p>
-                <div className="address-options">
-                  <button 
-                    className="retry-btn"
-                    onClick={handleRetryLocation}
-                  >
-                    🔄 Retry Location Detection
-                  </button>
-                  <button 
-                    className="manual-input-btn"
-                    onClick={() => setManualAddressMode(true)}
-                  >
-                    ✏️ Enter Address Manually
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Các phần khác giữ nguyên */}
           {/* Order Items */}
           <div className="order-items-section">
-            <div className="section-header">
-              <span className="section-title">Order Items</span>
-            </div>
             <div className="order-items-list">
               {cart.map(item => (
                 <div key={item.id} className="order-item">
                   <div className="order-item-main">
                     <div className="order-item-info">
-                      <div className="order-item-name">{item.name} × {item.quantity}</div>
-                      <div className="order-item-price">${(item.price * item.quantity).toFixed(2)}</div>
-                    </div>
-                    {item.description && (
-                      <div className="order-item-description">
-                        {item.description}
+                      {/* Hình ảnh sản phẩm */}
+                      <div className="order-item-image-container">
+                        <div className="order-item-image">
+                          {item.image ? (
+                            <img 
+                              src={item.image} 
+                              alt={item.name}
+                              className="item-image"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          ) : null}
+                        </div>
+                        <div className="order-item-content">
+                          <div className="order-item-left">
+                            <div className="order-item-name">{item.name}</div>
+                            {item.description && (
+                              <div className="order-item-description">
+                                {item.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    )}
+                      <div className="order-item-right">
+                        <div className="order-item-quantity">{item.quantity}x</div>
+                        <div className="order-item-price">${(item.price * item.quantity).toFixed(2)}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Special Instructions */}
-          <div className="special-instructions-section">
-            <div className="section-title">Special Instructions</div>
-            <textarea
-              className="special-instructions-input"
-              placeholder="Any special requests, delivery instructions, etc."
-              value={specialInstructions}
-              onChange={(e) => onSpecialInstructionsChange(e.target.value)}
-              rows="3"
-            />
-          </div>
-
           {/* Voucher Code */}
           <div className="voucher-section">
-            <div className="section-title">Voucher Code</div>
             <input
               type="text"
               className="voucher-input"
@@ -688,6 +638,93 @@ const OrderForm = ({
             />
           </div>
 
+          {/* Special Instructions */}
+          <div className="special-instructions-section">
+            <textarea
+              className="special-instructions-input"
+              placeholder="Add comment..."
+              value={specialInstructions}
+              onChange={(e) => onSpecialInstructionsChange(e.target.value)}
+              rows="3"
+            />
+          </div>
+
+          {/* Customer Information */}
+          <div className="customer-info-section">
+            <div className="customer-info-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Your full name"
+                    value={customerInfo.customerName}
+                    onChange={(e) => handleCustomerInfoChange('customerName', e.target.value)}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label className="form-label">Phone</label>
+                  <input
+                    type="tel"
+                    className="form-input"
+                    placeholder="Phone number"
+                    value={customerInfo.customerPhone}
+                    onChange={(e) => handleCustomerInfoChange('customerPhone', e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Address</label>
+                <textarea
+                  className="form-textarea"
+                  placeholder="Full delivery address"
+                  value={customerInfo.deliveryAddress}
+                  onChange={(e) => handleCustomerInfoChange('deliveryAddress', e.target.value)}
+                  rows="3"
+                />
+                {isGeocoding && (
+                  <div className="geocoding-indicator">
+                    Updating map location...
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Map Section */}
+          {showMap && deliveryAddress && (
+            <div className="map-section">
+              <div 
+                ref={mapRef} 
+                className="delivery-map"
+                style={{ height: '200px', width: '100%' }}
+              />
+              <div className="map-actions">
+                <button 
+                  className="retry-location-btn"
+                  onClick={handleRetryLocation}
+                  disabled={isGettingLocation}
+                >
+                  {isGettingLocation ? 'Getting Location...' : 'Refresh Location'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!showMap && (
+            <div className="map-toggle-section">
+              <button 
+                className="show-map-btn"
+                onClick={toggleMap}
+              >
+                Show Delivery Map
+              </button>
+            </div>
+          )}
+
           {/* Order Summary */}
           <div className="order-summary-section">
             <div className="summary-row">
@@ -695,7 +732,7 @@ const OrderForm = ({
               <span>${(finalTotal).toFixed(2)}</span>
             </div>
             <div className="summary-row">
-              <span>Free Delivery</span>
+              <span>Delivery</span>
               <span>$0.00</span>
             </div>
             <div className="summary-row total-row">
@@ -713,17 +750,12 @@ const OrderForm = ({
                 onClick={() => onPaymentMethodChange('crypto')}
               >
                 <div className="payment-method-info">
-                  <div className="payment-method-name">Crypto QR</div>
+                  <div className="payment-method-name">Crypto QR Payment</div>
                   <div className="payment-method-description">Pay with USDT (TRC20)</div>
                 </div>
                 <div className="payment-method-icon">🔗</div>
               </div>
             </div>
-          </div>
-
-          {/* Payment Note */}
-          <div className="payment-note">
-            <p>💡 <strong>Note:</strong> For crypto payments, you have 10 minutes to complete the transaction.</p>
           </div>
         </div>
 
@@ -731,11 +763,10 @@ const OrderForm = ({
           <button 
             className="pay-button" 
             onClick={handlePlaceOrder}
-            disabled={cart.length === 0 || (!deliveryAddress && !manualAddressMode) || (manualAddressMode && !manualAddress.trim())}
+            disabled={cart.length === 0 || !customerInfo.customerName || !customerInfo.customerPhone || !customerInfo.deliveryAddress}
           >
-             PAY WITH CRYPTO ${finalTotal.toFixed(2)}
+            PAY ${finalTotal.toFixed(2)}
           </button>
-    
         </div>
       </div>
     </div>

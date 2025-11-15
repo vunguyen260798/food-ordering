@@ -58,6 +58,7 @@ const FoodOrderingApp = () => {
   const handleAddressUpdate = (address) => {
     setDeliveryAddress(address);
   };
+  
   const handleUseCurrentLocation = () => {
     // Integration với Telegram Web App để lấy vị trí hiện tại
     if (window.Telegram && window.Telegram.WebApp) {
@@ -222,13 +223,11 @@ const FoodOrderingApp = () => {
     return getTotalPrice() + getDeliveryFee();
   };
 
-  // Accept optional data from OrderForm (child). OrderForm calls onPlaceOrder({...})
-  const handlePlaceOrder = async (orderFromForm) => {
-    // Prefer delivery address from the form payload (orderFromForm.deliveryAddress)
-    const addressToUse = orderFromForm?.deliveryAddress || deliveryAddress;
+  const handlePlaceOrder = async (orderData) => {
+    const customerInfo = orderData?.customerInfo;
 
-    if (!addressToUse) {
-      alert('Please select a delivery address');
+    if (!customerInfo) {
+      alert('Please fill in all required customer information');
       return;
     }
 
@@ -240,13 +239,6 @@ const FoodOrderingApp = () => {
       if (window.Telegram?.WebApp) {
         const tg = window.Telegram.WebApp;
         const user = tg.initDataUnsafe?.user;
-        
-        console.log('Telegram WebApp available:', {
-          exists: !!tg,
-          initDataUnsafe: tg.initDataUnsafe,
-          user: user,
-          initData: tg.initData
-        });
         
         if (user) {
           telegramInfo = {
@@ -261,23 +253,12 @@ const FoodOrderingApp = () => {
             platform: tg.platform || '',
             queryId: tg.initDataUnsafe?.query_id || '',
             authDate: tg.initDataUnsafe?.auth_date ? tg.initDataUnsafe.auth_date * 1000 : Date.now(),
-            initData: tg.initData // Raw init data for backend verification
+            initData: tg.initData
           };
-          console.log('Telegram info collected:', telegramInfo);
-        } else {
-          console.warn('Telegram user data not available');
         }
-      } else {
-        console.warn('Telegram WebApp not available - order will be placed without Telegram info');
       }
 
-      // Chuẩn bị order payload
-      // Merge values: use values from form if provided, otherwise fall back to state
-      const instructions = orderFromForm?.specialInstructions ?? specialInstructions;
-      const voucher = orderFromForm?.voucherCode ?? voucherCode;
-      const paymentMethod = orderFromForm?.paymentMethod ?? selectedPaymentMethod;
-
-      // Chuẩn bị order payload với deliveryAddress đúng format
+      // Prepare order payload with customer info
       const orderPayload = {
         items: cart.map(item => ({
           productId: item.productId,
@@ -287,31 +268,27 @@ const FoodOrderingApp = () => {
           price: item.selectedVariant ? item.selectedVariant.price : item.price,
           name: item.name
         })),
-        specialInstructions: instructions,
-        voucherCode: voucher,
+        specialInstructions: orderData?.specialInstructions ?? specialInstructions,
+        voucherCode: orderData?.voucherCode ?? voucherCode,
         total: getFinalTotal(),
-        paymentMethod: selectedPaymentMethod,
-        telegramInfo: telegramInfo,// Include Telegram info
+        paymentMethod: orderData?.paymentMethod ?? selectedPaymentMethod,
+        telegramInfo: telegramInfo,
         subtotal: getTotalPrice(),
         tax: getTax(),
         deliveryFee: getDeliveryFee(),
-        deliveryAddress: addressToUse.formattedAddress || String(addressToUse), // CHỈ GỬI CHUỖI ĐỊA CHỈ
-        deliveryLocation: { // THÊM LOCATION COORDINATES (nếu có)
-          latitude: addressToUse.latitude,
-          longitude: addressToUse.longitude
-        },
+        customerInfo: orderData.customerInfo,
         status: 'pending'
       };
 
-      console.log('Placing order with address:', orderPayload.deliveryAddress); // Debug log
+      // console.log('Placing order with customer info:', orderPayload.customerInfo);
 
-      // Gọi API tạo order
+      // Call API to create order
       const response = await orderAPI.createOrder(orderPayload);
       
       if (response.success) {
         setCurrentOrder(response.data);
         
-        if (paymentMethod === 'crypto') {
+        if (orderPayload.paymentMethod === 'crypto') {
           setShowQRPayment(true);
           startPaymentPolling(response.data._id);
         } else {
@@ -416,6 +393,40 @@ const FoodOrderingApp = () => {
     }
   };
 
+  const updateCartQuantity = (product, newQuantity) => {
+    const variantId = product.selectedVariant?._id || '';
+    const uniqueId = `${product._id}-${variantId}`;
+    
+    if (newQuantity <= 0) {
+      removeFromCart(uniqueId);
+      return;
+    }
+
+    setCart(prevCart => {
+      const existingItem = prevCart.find(item => item.id === uniqueId);
+      if (existingItem) {
+        return prevCart.map(item =>
+          item.id === uniqueId
+            ? { ...item, quantity: newQuantity }
+            : item
+        );
+      } else {
+        // Nếu item chưa tồn tại, thêm mới
+        const cartItem = {
+          id: uniqueId,
+          productId: product._id,
+          name: product.selectedVariant ? `${product.name} (${product.selectedVariant.name})` : product.name,
+          price: product.selectedVariant ? product.selectedVariant.price : product.price,
+          quantity: newQuantity,
+          image: product.image,
+          description: product.selectedVariant?.description || product.description,
+          selectedVariant: product.selectedVariant
+        };
+        return [...prevCart, cartItem];
+      }
+    });
+  };
+
   if (orderSuccess) {
     return (
       <OrderSuccess onClose={closeOrderSuccess} />
@@ -436,7 +447,7 @@ const FoodOrderingApp = () => {
           getProductQuantity={getProductQuantity}
           onAddToCart={addToCart}
           onRemoveFromCart={removeFromCart}
-          onUpdateQuantity={updateCartItem}
+          onUpdateQuantity={updateCartQuantity}
         />
       </main>
 
@@ -490,6 +501,8 @@ const FoodOrderingApp = () => {
           }}
           onPaymentSuccess={handleQRPaymentSuccess}
           isPolling={!!paymentPolling}
+          customerInfo={currentOrder.customerInfo}
+          deliveryAddress={deliveryAddress}
         />
       )}
     </div>

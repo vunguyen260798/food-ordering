@@ -63,24 +63,22 @@ export const orderAPI = {
     return response.data;
   },
 
-  // Create new order
   createOrder: async (orderData) => {
-    // Send full order payload to server. Include deliveryAddress and location when available.
     const payload = {
       items: orderData.items,
       specialInstructions: orderData.specialInstructions,
       voucherCode: orderData.voucherCode,
       paymentMethod: orderData.paymentMethod,
-      customerName: orderData.customerName || 'Customer',
-      customerPhone: orderData.customerPhone || '',
-      deliveryAddress: orderData.deliveryAddress || '',
+      customerName: orderData.customerInfo.customerName || 'Customer',
+      customerPhone: orderData.customerInfo.customerPhone || '',
+      deliveryAddress: orderData.customerInfo.deliveryAddress || '',
       deliveryLocation: orderData.deliveryLocation || null,
       total: orderData.total,
       subtotal: orderData.subtotal,
       tax: orderData.tax,
       deliveryFee: orderData.deliveryFee,
       status: orderData.status || 'pending',
-      telegramInfo: orderData.telegramInfo // Include Telegram info
+      telegramInfo: orderData.telegramInfo 
     };
 
     const response = await api.post('/orders', payload);

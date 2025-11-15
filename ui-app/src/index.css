@@ -186,14 +186,6 @@ body {
 .form-group {
   margin-bottom: 20px;
 }
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  color: #2c3e50;
-  font-weight: 500;
-}
-
 .form-control {
   width: 100%;
   padding: 10px 15px;

@@ -227,18 +227,8 @@
 }
 
 .order-item {
-  display: flex;
-  justify-content: space-between;
   margin-bottom: 4px;
   font-size: 14px;
-}
-
-.item-name {
-  color: #333;
-}
-
-.item-quantity {
-  color: #666;
 }
 
 .more-items {
@@ -388,11 +378,6 @@
   display: flex;
   justify-content: space-between;
   margin-bottom: 4px;
-}
-
-.item-name {
-  font-weight: 600;
-  color: #1a1a1a;
 }
 
 .item-price {
