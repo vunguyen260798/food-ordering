@@ -137,9 +137,10 @@ class CryptoPaymentService {
         rawValue: transaction.value,
         decimals: transaction.token_info.decimals,
         blockTimestamp: new Date(transaction.block_timestamp),
-        status: 'paid'
+        status: 'confirmed'
       });
 
+      order.status = 'paid';
       order.paymentTransaction = paymentTransaction._id;
       order.cryptoPayment.receivedAmount = receivedAmountUSDT;
       order.cryptoPayment.transactionHash = transaction.transaction_id;
