@@ -84,9 +84,15 @@ class CryptoPaymentService {
   }
 
   async processTransaction(tx, pendingOrders) {
+    try {
+      // Tìm order khớp với transaction
+      const matchingOrder = await this.findOrderByTransaction(receivedAmountUSDT, pendingOrders);
 
-    for (const order of pendingOrders) {
-        await this.confirmPayment(order, tx, order.totalAmount);
+      if (matchingOrder) {
+        await this.confirmPayment(matchingOrder, tx, receivedAmountUSDT);
+      }
+    } catch (error) {
+      console.error('Error processing transaction:', error);
     }
   }
 
@@ -98,6 +104,7 @@ class CryptoPaymentService {
       if (extractedOrderCode && extractedOrderCode === order.orderNumber) {
         return order;
       }
+    
     }
     
     return null;
@@ -124,8 +131,8 @@ class CryptoPaymentService {
 
   async confirmPayment(order, transaction, receivedAmountUSDT) {
     try {
-      
-      const transactionId = crypto.randomUUID();
+      // Use the actual transaction ID from blockchain
+      const transactionId = transaction.transaction_id;
       
       const paymentTransaction = await PaymentTransaction.create({
         transactionId: transactionId,
@@ -147,11 +154,14 @@ class CryptoPaymentService {
       
       await order.save();
 
+      console.log(`✅ Payment confirmed for order ${order.orderNumber}`);
+
       // Gửi notification đến Telegram
       await telegramService.sendNotification(order, transaction, paymentTransaction);
       
     } catch (error) {
       console.error('Error confirming payment:', error);
+      throw error; // Re-throw to see full error details
     }
   }
 
