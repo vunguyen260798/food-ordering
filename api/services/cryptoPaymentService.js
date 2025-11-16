@@ -140,7 +140,6 @@ class CryptoPaymentService {
         status: 'confirmed'
       });
 
-      order.status = 'pending';
       order.paymentTransaction = paymentTransaction._id;
       order.cryptoPayment.receivedAmount = receivedAmountUSDT;
       order.cryptoPayment.transactionHash = transaction.transaction_id;
