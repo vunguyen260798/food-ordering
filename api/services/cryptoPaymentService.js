@@ -85,9 +85,6 @@ class CryptoPaymentService {
 
   async processTransaction(tx, pendingOrders) {
     try {
-      // Tìm order khớp với transaction
-      const matchingOrder = await this.findOrderByTransaction(receivedAmountUSDT, pendingOrders);
-
       if (matchingOrder) {
         await this.confirmPayment(matchingOrder, tx, receivedAmountUSDT);
       }
