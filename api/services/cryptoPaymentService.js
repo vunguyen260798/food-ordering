@@ -129,8 +129,8 @@ class CryptoPaymentService {
   async confirmPayment(order, transaction, receivedAmountUSDT) {
     try {
       // Use the actual transaction ID from blockchain
-      const transactionId = transaction.transaction_id;
-      
+      // const transactionId = transaction.transaction_id;
+      const transactionId = crypto.randomBytes(16).toString('hex');
       const paymentTransaction = await PaymentTransaction.create({
         transactionId: transactionId,
         order: order._id,
