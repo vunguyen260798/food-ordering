@@ -154,7 +154,11 @@ const FoodOrderingApp = () => {
   };
 
   const getProductQuantity = (productId) => {
-    const item = cart.find(item => item.productId === productId);
+    // For products without variants, find by composite ID (productId-)
+    const item = cart.find(item => 
+      item.productId === productId || 
+      item.id === `${productId}-`
+    );
     return item ? item.quantity : 0;
   };
 

@@ -269,7 +269,7 @@ const getOrderById = async (req, res) => {
 // @access  Private
 const updateOrderStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, reason } = req.body;
 
     const order = await Order.findById(req.params.id);
 
@@ -280,6 +280,10 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
+    // Store old status for comparison
+    const oldStatus = order.status;
+
+    // Update order status
     order.status = status;
 
     if (status === 'delivered') {
@@ -287,6 +291,22 @@ const updateOrderStatus = async (req, res) => {
     }
 
     await order.save();
+
+    // Send notification to customer if status changed
+    if (oldStatus !== status) {
+      try {
+        const telegramService = require('../services/telegramService');
+        const statusesToNotify = ['preparing', 'shipping', 'delivered'];
+        
+        if (statusesToNotify.includes(status)) {
+          const additionalData = reason ? { reason } : {};
+          await telegramService.sendStatusChangeNotification(order, status, additionalData);
+        }
+      } catch (notifError) {
+        console.error('Error sending status notification:', notifError.message);
+        // Don't fail the request if notification fails
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -307,6 +327,7 @@ const updateOrderStatus = async (req, res) => {
 // @access  Private
 const cancelOrder = async (req, res) => {
   try {
+    const { reason } = req.body;
     const order = await Order.findById(req.params.id);
 
     if (!order) {
@@ -323,8 +344,23 @@ const cancelOrder = async (req, res) => {
       });
     }
 
+    // Store old status
+    const oldStatus = order.status;
+
     order.status = 'cancelled';
     await order.save();
+
+    // Send cancellation notification to customer
+    if (oldStatus !== 'cancelled') {
+      try {
+        const telegramService = require('../services/telegramService');
+        const additionalData = reason ? { reason } : {};
+        await telegramService.sendStatusChangeNotification(order, 'cancelled', additionalData);
+      } catch (notifError) {
+        console.error('Error sending cancellation notification:', notifError.message);
+        // Don't fail the request if notification fails
+      }
+    }
 
     res.status(200).json({
       success: true,

@@ -23,12 +23,13 @@ const OrderManagement = () => {
 
   const statusOptions = [
     { value: '', label: 'Tất cả đơn hàng', color: '#666' },
-    { value: 'pending', label: 'Chờ xác nhận', color: '#FF9500' },
-    { value: 'confirmed', label: 'Đã xác nhận', color: '#007AFF' },
+    { value: 'pending', label: 'Chờ thanh toán', color: '#FF9500' },
+    { value: 'paid', label: 'Đã thanh toán', color: '#007AFF' },
     { value: 'preparing', label: 'Đang chuẩn bị', color: '#5856D6' },
-    { value: 'ready', label: 'Sẵn sàng', color: '#34C759' },
+    { value: 'shipping', label: 'Đang giao hàng', color: '#34C759' },
     { value: 'delivered', label: 'Đã giao', color: '#32D74B' },
-    { value: 'cancelled', label: 'Đã hủy', color: '#FF3B30' }
+    { value: 'cancelled', label: 'Đã hủy', color: '#FF3B30' },
+    { value: 'expired', label: 'Hết hạn', color: '#8E8E93' }
   ];
 
   useEffect(() => {
@@ -171,12 +172,27 @@ const OrderManagement = () => {
               </td>
               <td className="order-total">{formatCurrency(order.totalAmount)}</td>
               <td>
-                <span 
-                  className="status-badge"
-                  style={{ backgroundColor: getStatusColor(order.status) }}
+                <select
+                  className="status-select"
+                  value={order.status}
+                  onChange={(e) => handleUpdateOrderStatus(order._id, e.target.value)}
+                  style={{ 
+                    backgroundColor: getStatusColor(order.status),
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 10px',
+                    borderRadius: '4px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                  disabled={order.status === 'cancelled' || order.status === 'delivered' || order.status === 'expired'}
                 >
-                  {getStatusLabel(order.status)}
-                </span>
+                  {statusOptions.slice(1).map(status => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
               </td>
               <td className="order-time">{formatDate(order.createdAt)}</td>
               <td>
@@ -296,49 +312,6 @@ const OrderManagement = () => {
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="action-buttons">
-            {order.status === 'pending' && (
-              <>
-                <button 
-                  className="btn confirm-btn"
-                  onClick={() => onUpdateStatus(order._id, 'confirmed')}
-                >
-                  Xác nhận đơn
-                </button>
-                <button 
-                  className="btn cancel-btn"
-                  onClick={() => onCancelOrder(order._id)}
-                >
-                  Hủy đơn
-                </button>
-              </>
-            )}
-            {order.status === 'confirmed' && (
-              <button 
-                className="btn preparing-btn"
-                onClick={() => onUpdateStatus(order._id, 'preparing')}
-              >
-                Bắt đầu chuẩn bị
-              </button>
-            )}
-            {order.status === 'preparing' && (
-              <button 
-                className="btn ready-btn"
-                onClick={() => onUpdateStatus(order._id, 'ready')}
-              >
-                Đã sẵn sàng
-              </button>
-            )}
-            {order.status === 'ready' && (
-              <button 
-                className="btn deliver-btn"
-                onClick={() => onUpdateStatus(order._id, 'delivered')}
-              >
-                Đã giao hàng
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>

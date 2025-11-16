@@ -1,5 +1,6 @@
 require('dotenv').config();
 const axios = require('axios');
+const templateManager = require('./templateManager');
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -7,13 +8,75 @@ const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 class TelegramService {
   async sendNotification(order, transaction, paymentTransaction) {
     try {
+      // Send notification to owner
+      const ownerMessage = templateManager.buildOwnerNotification(order, transaction, paymentTransaction);
+      
+      const ownerResponse = await axios.post(
+        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+        {
+          chat_id: TELEGRAM_CHAT_ID,
+          text: ownerMessage,
+          parse_mode: 'HTML'
+        },
+        {
+          timeout: 5000
+        }
+      );
 
-      const message = this.buildOrderMessage(order, transaction, paymentTransaction);
+      console.log('📱 Owner notification sent successfully');
+
+      // Send notification to customer if telegram info is available
+      if (order.telegramInfo && order.telegramInfo.chatId) {
+        await this.sendCustomerNotification(order, transaction, paymentTransaction);
+      }
+
+      return ownerResponse.data;
+    } catch (error) {
+      console.error('Error sending Telegram notification:', error.message);
+    }
+  }
+
+  async sendCustomerNotification(order, transaction, paymentTransaction) {
+    try {
+      const customerMessage = templateManager.buildCustomerNotification(order, transaction, paymentTransaction);
       
       const response = await axios.post(
         `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
         {
-          chat_id: TELEGRAM_CHAT_ID,
+          chat_id: order.telegramInfo.chatId,
+          text: customerMessage,
+          parse_mode: 'HTML'
+        },
+        {
+          timeout: 5000
+        }
+      );
+
+      console.log(`📱 Customer notification sent to ${order.telegramInfo.username || order.telegramInfo.firstName}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error sending customer notification:', error.message);
+    }
+  }
+
+  /**
+   * Send order status change notification to customer
+   */
+  async sendStatusChangeNotification(order, status, additionalData = {}) {
+    try {
+      // Check if customer has telegram info
+      if (!order.telegramInfo || !order.telegramInfo.chatId) {
+        console.log('⚠️ No telegram info available for customer');
+        return;
+      }
+
+      // Build unified status notification message
+      const message = templateManager.buildOrderStatusNotification(order, status, additionalData);
+
+      const response = await axios.post(
+        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+        {
+          chat_id: order.telegramInfo.chatId,
           text: message,
           parse_mode: 'HTML'
         },
@@ -22,45 +85,11 @@ class TelegramService {
         }
       );
 
-      console.log('📱 Telegram notification sent successfully');
+      console.log(`📱 Status change notification sent to customer: ${status}`);
       return response.data;
     } catch (error) {
-      console.error('Error sending Telegram notification:', error.message);
+      console.error('Error sending status change notification:', error.message);
     }
-  }
-
-  buildOrderMessage(order, transaction, paymentTransaction) {
-    const receivedAmount = paymentTransaction ? paymentTransaction.amount : (parseInt(transaction.value) / 1000000);
-    const transactionHash = paymentTransaction ? paymentTransaction.transactionId : transaction.transaction_id;
-    const fromAddress = paymentTransaction ? paymentTransaction.fromAddress : transaction.from;
-    
-    return `
-  🍕 <b>ORDER PLACED SUCCESSFULLY</b>
-
-  <b>Order Information:</b>
-  • Order Number: ${order.orderNumber}
-  • Customer: ${order.customerName}
-  • Phone: ${order.customerPhone || 'Not provided'}
-
-  <b>Payment Information:</b>
-  • Method: <b>Crypto (USDT)</b>
-  • Amount received: <b>${receivedAmount} USDT</b>
-  • Transaction ID: <b>${transactionHash}</b>
-  • Sender wallet: <b>${fromAddress}</b>
-
-  <b>Order Details:</b>
-  • Total (fiat): <b>$${order.totalAmount}</b>
-  • Reference code: <b>${order.cryptoValue}</b>
-  • Order time: <b>${new Date().toLocaleString('en-US')}</b>
-
-  <b>Special Instructions:</b>
-  ${order.specialInstructions || 'No special instructions'}
-
-  <b>Status:</b> Your order has been confirmed and is being prepared.
-  Estimated delivery time: <b>45 minutes</b>.
-
-  Thank you for your order!
-    `.trim();
   }
 }
 

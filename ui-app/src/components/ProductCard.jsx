@@ -129,7 +129,7 @@ const ProductCard = ({ product, isInCart, quantity, onAddToCart, onUpdateQuantit
           quantity === 0 ? (
             <button
               className="add-to-cart-btn"
-              onClick={handleAddToCart}
+              onClick={() => onAddToCart(product)}
             >
               Add 
             </button>
