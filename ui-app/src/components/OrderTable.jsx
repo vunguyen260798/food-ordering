@@ -21,6 +21,7 @@ const OrderTable = ({ orders, onViewOrder, onUpdateStatus, onCancelOrder }) => {
   const getStatusBadgeClass = (status) => {
     const statusClasses = {
       pending: 'status-pending',
+      paid: 'status-paid',
       confirmed: 'status-confirmed',
       preparing: 'status-preparing',
       ready: 'status-ready',
@@ -30,7 +31,7 @@ const OrderTable = ({ orders, onViewOrder, onUpdateStatus, onCancelOrder }) => {
     return `status-badge ${statusClasses[status] || 'status-pending'}`;
   };
 
-  const statusOptions = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
+  const statusOptions = ['pending', 'paid', 'preparing', 'ready', 'delivered', 'cancelled'];
 
   if (orders.length === 0) {
     return (
